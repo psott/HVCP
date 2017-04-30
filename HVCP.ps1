@@ -127,7 +127,16 @@ $xaml = @'
    Title="Hyper-V Console Plus 0.1"
    Background="#FFCBCBCB">
     <Grid>
-        <DockPanel>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition MinWidth="150" Width="200" />
+            <ColumnDefinition Width="5" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel Grid.ColumnSpan="3">
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
                     <MenuItem Header="Options" />
@@ -143,33 +152,41 @@ $xaml = @'
                 </MenuItem>
             </Menu>
         </DockPanel>
-        <ListView Name="lv" HorizontalAlignment="Stretch" Margin="0,20,00,200" VerticalAlignment="Stretch">
-            <ListView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Name ="CMConnect" Header="Connect"/>
-                    <Separator/>
-                    <MenuItem Name ="CMStart" Header="Start"/>
-                    <MenuItem Name ="CMRestart" Header="Restart"/>
-                    <MenuItem Name ="CMShutdown" Header="Shutdown"/>
-                    <MenuItem Name ="CMSave" Header="Save"/>
-                </ContextMenu>
-            </ListView.ContextMenu>
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="Name" DisplayMemberBinding="{Binding 'Name'}" Width="180"/>
-                    <GridViewColumn Header="State" DisplayMemberBinding="{Binding 'State'}" Width="60"/>
-                    <GridViewColumn Header="Uptime" DisplayMemberBinding="{Binding 'Uptime'}" Width="120"/>
-                    <GridViewColumn Header="CPU Cores" DisplayMemberBinding="{Binding 'ProcessorCount'}" Width="60"/>
-                    <GridViewColumn Header="CPUUsage" DisplayMemberBinding="{Binding 'CPUUsage'}" Width="60"/>
-                    <GridViewColumn Header="MemoryAssigned" DisplayMemberBinding="{Binding 'MemoryAssigned'}" Width="auto"/>
-                    <GridViewColumn Header="MemoryDemand" DisplayMemberBinding="{Binding 'MemoryDemand'}" Width="auto"/>
-                    <GridViewColumn Header="Version" DisplayMemberBinding="{Binding 'Version'}" Width="60"/>
-                    <GridViewColumn Header="VMGeneration" DisplayMemberBinding="{Binding 'VirtualMachineSubType'}" Width="140"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
-        <Rectangle Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,10" Fill="#FFBDBDBD"/>
-        <Image x:Name="image" Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,10"/>
+        <Grid Grid.Column="0" Grid.Row="1">
+            <TreeView Name="tv" Margin="5">
+                
+            </TreeView>
+        </Grid>
+        <GridSplitter Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" />
+        <Grid Grid.Column="2" Grid.Row="1">
+            <ListView Name="lv" HorizontalAlignment="Stretch" Margin="5,5,00,190" VerticalAlignment="Stretch">
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Name ="CMConnect" Header="Connect"/>
+                        <Separator/>
+                        <MenuItem Name ="CMStart" Header="Start"/>
+                        <MenuItem Name ="CMRestart" Header="Restart"/>
+                        <MenuItem Name ="CMShutdown" Header="Shutdown"/>
+                        <MenuItem Name ="CMSave" Header="Save"/>
+                    </ContextMenu>
+                </ListView.ContextMenu>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding 'Name'}" Width="180"/>
+                        <GridViewColumn Header="State" DisplayMemberBinding="{Binding 'State'}" Width="60"/>
+                        <GridViewColumn Header="Uptime" DisplayMemberBinding="{Binding 'Uptime'}" Width="120"/>
+                        <GridViewColumn Header="CPU Cores" DisplayMemberBinding="{Binding 'ProcessorCount'}" Width="60"/>
+                        <GridViewColumn Header="CPUUsage" DisplayMemberBinding="{Binding 'CPUUsage'}" Width="60"/>
+                        <GridViewColumn Header="MemoryAssigned" DisplayMemberBinding="{Binding 'MemoryAssigned'}" Width="auto"/>
+                        <GridViewColumn Header="MemoryDemand" DisplayMemberBinding="{Binding 'MemoryDemand'}" Width="auto"/>
+                        <GridViewColumn Header="Version" DisplayMemberBinding="{Binding 'Version'}" Width="60"/>
+                        <GridViewColumn Header="VMGeneration" DisplayMemberBinding="{Binding 'VirtualMachineSubType'}" Width="140"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <Rectangle Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5" Fill="#FFBDBDBD"/>
+            <Image x:Name="image" Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5"/>
+        </Grid>
     </Grid>
 </Window>
 '@
@@ -197,7 +214,7 @@ $xamlnewvm = @'
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv', 'MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','tv', 'MQuick' -PassThru
 $windowNewVM = Convert-XAMLtoWindow -XAML $xamlnewvm -NamedElement 'button', 'button1', 'button1_Copy', 'checkBox', 'comboBox', 'textBox' -PassThru
 
 $window.CMConnect.add_Click{
@@ -250,6 +267,8 @@ $window.MQuick.add_Click{
   $result = Show-WPFWindow -Window $windowNewVM
 }
 
+$lhname = Get-WmiObject -Class Win32_Computersystem | select -ExpandProperty Name
+$window.tv.AddChild($lhname)
 
 Get-VMList
 Start-Timer
