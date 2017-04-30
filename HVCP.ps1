@@ -83,27 +83,31 @@ function Get-VMScreenshot
 }
 function Get-VMList
 {
+  param(
+    $vmservers
+  )
   $selIndex = $window.lv.SelectedIndex
   $window.lv.Items.Clear()
   
-  $GetVM = Get-VM | ForEach-Object {
-    $ma = ($_.MemoryAssigned)/1MB
-    $md = ($_.MemoryDemand)/1MB
-    $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
-    [PSCustomObject]@{
-      Name = $_.Name
-      State = $_.State
-      Uptime = $ut
-      ProcessorCount = $_.ProcessorCount
-      CPUUsage = $_.CPUUsage
-      MemoryAssigned = $ma
-      MemoryDemand = $md
-      Version = $_.Version
-      VirtualMachineSubType = $_.VirtualMachineSubType
+  foreach($vmserver in $vmservers){
+    $GetVM = Get-VM -ComputerName $vmservers | ForEach-Object {
+      $ma = ($_.MemoryAssigned)/1MB
+      $md = ($_.MemoryDemand)/1MB
+      $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
+      [PSCustomObject]@{
+        Name = $_.Name
+        State = $_.State
+        Uptime = $ut
+        ProcessorCount = $_.ProcessorCount
+        CPUUsage = $_.CPUUsage
+        MemoryAssigned = $ma
+        MemoryDemand = $md
+        Version = $_.Version
+        VirtualMachineSubType = $_.VirtualMachineSubType
+      }
     }
+    $GetVM | ForEach-Object {$window.lv.AddChild($_)}
   }
-  $GetVM | ForEach-Object {$window.lv.AddChild($_)}
-
   $window.lv.SelectedIndex = $selIndex
 }
 function Start-Timer
@@ -111,7 +115,7 @@ function Start-Timer
   Add-Type -AssemblyName System.Windows.Forms
   $Script:timer = New-Object System.Windows.Forms.Timer
   $Script:timer.Interval = 5000 #5sek
-  $Script:timer.add_tick({Get-VMList})
+  $Script:timer.add_tick({Get-VMList -vmservers localhost})
   $Script:timer.Start()
 }
 #endregion 
@@ -153,9 +157,20 @@ $xaml = @'
             </Menu>
         </DockPanel>
         <Grid Grid.Column="0" Grid.Row="1">
-            <TreeView Name="tv" Margin="5">
-                
-            </TreeView>
+          <ListView Name="lvs" Margin="5">
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Name ="CMSConnect" Header="Connect"/>
+                        <MenuItem Name ="CMSDisconnect" Header="Disconnect"/>
+                        <MenuItem Name ="CMSDelete" Header="Delete"/>
+                    </ContextMenu>
+                </ListView.ContextMenu>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding 'Name'}" Width="180"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
         </Grid>
         <GridSplitter Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" />
         <Grid Grid.Column="2" Grid.Row="1">
@@ -214,7 +229,7 @@ $xamlnewvm = @'
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','tv', 'MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs', 'MQuick' -PassThru
 $windowNewVM = Convert-XAMLtoWindow -XAML $xamlnewvm -NamedElement 'button', 'button1', 'button1_Copy', 'checkBox', 'comboBox', 'textBox' -PassThru
 
 $window.CMConnect.add_Click{
@@ -267,12 +282,11 @@ $window.MQuick.add_Click{
   $result = Show-WPFWindow -Window $windowNewVM
 }
 
-$lhname = Get-WmiObject -Class Win32_Computersystem | select -ExpandProperty Name
-$window.tv.AddChild($lhname)
-
-Get-VMList
+$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
+$window.lvs.AddChild($lhname)
+Get-VMList -vmservers $lhname.Name
 Start-Timer
 
 $result = Show-WPFWindow -Window $window
-$Script:timer.Stop()
-$Script:timer = $null
+#$Script:timer.Stop()
+#$Script:timer = $null
