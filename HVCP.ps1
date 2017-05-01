@@ -203,11 +203,11 @@ function Get-AddServer
   $winaddserver.BAddServer.add_Click{
     Get-ServerConnection
     <#if($winaddserver.CBWinCred.IsChecked -eq $true -or $winaddserver.CBsaveCred.IsChecked -eq $true){
-      Write-Host 'passt'
-      #$winaddserver.DialogResult = $true
-    }
-    else{
-      Write-Host 'neeee'
+        Write-Host 'passt'
+        #$winaddserver.DialogResult = $true
+        }
+        else{
+        Write-Host 'neeee'
     }#>  
   }
 
@@ -408,16 +408,23 @@ $xaml = @'
 $window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs','BAdd', 'MQuick' -PassThru
 
 $window.MOptions.add_Click{
+  $Script:timer.Stop()
   Get-Options
+  $Script:timer.Start()
+  
 }
 $window.MExit.add_Click{
   $window.Close()
 }
 $window.MAbout.add_Click{
+  $Script:timer.Stop()
   Get-About
+  $Script:timer.Start()
 }
 $window.MQuick.add_Click{
+  $Script:timer.Stop()
   Get-NewVM
+  $Script:timer.Start()
 }
 
 $window.CMConnect.add_Click{
@@ -467,14 +474,16 @@ $window.lv.add_MouseLeftButtonUp{
 }
 
 $window.BAdd.add_Click{
+  $Script:timer.Stop()
   Get-AddServer
+  $Script:timer.Start()
 }
 
-#$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
-#$window.lvs.AddChild($lhname)
-#Get-VMList -vmservers $lhname.Name
-#Start-Timer
+$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
+$window.lvs.AddChild($lhname)
+Get-VMList -vmservers $lhname.Name
+Start-Timer
 
 $result = Show-WPFWindow -Window $window
-#$Script:timer.Stop()
-#$Script:timer = $null
+$Script:timer.Stop()
+$Script:timer = $null
