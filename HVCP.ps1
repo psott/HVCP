@@ -202,13 +202,6 @@ function Get-AddServer
 
   $winaddserver.BAddServer.add_Click{
     Get-ServerConnection
-    <#if($winaddserver.CBWinCred.IsChecked -eq $true -or $winaddserver.CBsaveCred.IsChecked -eq $true){
-        Write-Host 'passt'
-        #$winaddserver.DialogResult = $true
-        }
-        else{
-        Write-Host 'neeee'
-    }#>  
   }
 
   $winaddserver.BCancle.add_Click{
@@ -226,11 +219,10 @@ function Get-AddServer
       WinCred = $winaddserver.CBWinCred.IsChecked
       SaveCred = $winaddserver.CBsaveCred.IsChecked
     }
-
   }
   else
   {
-    Write-Warning 'User aborted dialog.'
+    #Write-Warning 'User aborted dialog.'
   }
 }
 function Get-NewVM
@@ -377,9 +369,10 @@ $xaml = @'
                         <MenuItem Name ="CMConnect" Header="Connect"/>
                         <Separator/>
                         <MenuItem Name ="CMStart" Header="Start"/>
-                        <MenuItem Name ="CMRestart" Header="Restart"/>
+                        <MenuItem Name ="CMRestart" Header="HardRestart"/>
                         <MenuItem Name ="CMShutdown" Header="Shutdown"/>
-                        <MenuItem Name ="CMSave" Header="Save"/>
+                        <MenuItem Name ="CMSave" Header="Save (to disk)"/>
+                        <MenuItem Name ="CMPause" Header="Pause (keep in RAM)"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
                 <ListView.View>
@@ -403,9 +396,8 @@ $xaml = @'
 </Window>
 '@
 
-
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs','BAdd', 'MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs','BAdd', 'MQuick' -PassThru
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -433,20 +425,30 @@ $window.CMConnect.add_Click{
 }
 
 $window.CMStart.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Start-VM -Name $selItem
+  $selItem = $window.lv.SelectedItem
+  if($selItem.State -eq 'Paused'){
+    Resume-VM -Name $selItem.Name -AsJob
+  }
+  else{
+    Start-VM -Name $selItem.Name -AsJob
+  }
 }
 $window.CMRestart.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
-  Restart-VM -Name $selItem
+  Restart-VM -Name $selItem -Force -AsJob #hardreset
 }
 $window.CMShutdown.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
-  Stop-VM -Name $selItem
+  Stop-VM -Name $selItem -AsJob #guest shutdown 
+  #Stop-VM -Name $selItem -TurnOff #
 }
 $window.CMSave.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
-  Save-VM -Name $selItem
+  Save-VM -Name $selItem -AsJob #save to disk
+}
+$window.CMPause.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  Suspend-VM -Name $selItem -AsJob #save in ram
 }
 
 $window.lv.add_MouseRightButtonDown{
@@ -455,13 +457,28 @@ $window.lv.add_MouseRightButtonDown{
   $window.CMRestart.IsEnabled = $false
   $window.CMShutdown.IsEnabled = $false
   $window.CMStart.IsEnabled = $false
+  $window.CMSave.IsEnabled = $false
+  $window.CMPause.IsEnabled = $false
 }
 $window.lv.add_MouseRightButtonUp{
-  if(($window.lv.SelectedItem).Name -ne $null){
+  $sel = $window.lv.SelectedItem
+  if($sel.Name -ne $null){
+    #if($sel.State)
     $window.CMConnect.IsEnabled = $true
     $window.CMRestart.IsEnabled = $true
     $window.CMShutdown.IsEnabled = $true
     $window.CMStart.IsEnabled = $true
+    $window.CMSave.IsEnabled = $true
+    $window.CMPause.IsEnabled = $true
+  }
+  else{
+    $window.lv.SelectedItems.Clear()
+    $window.CMConnect.IsEnabled = $false
+    $window.CMRestart.IsEnabled = $false
+    $window.CMShutdown.IsEnabled = $false
+    $window.CMStart.IsEnabled = $false
+    $window.CMSave.IsEnabled = $false
+    $window.CMPause.IsEnabled = $false
   }
 }
 
