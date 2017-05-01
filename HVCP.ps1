@@ -120,16 +120,214 @@ function Start-Timer
 }
 #endregion 
 
+#region Windows
+function Get-AddServer
+{
+  $xamladdserver = @'
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   Height="220" Width ="400" Title="add Hyper-V server" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Label Content="Server Name or IP:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <TextBox Name="TBnewServer" HorizontalAlignment="Left" Height="23" Margin="123,13,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="240"/>
+
+        <Label Content="User name:" HorizontalAlignment="Left" Margin="49,41,0,0" VerticalAlignment="Top"/>
+        <TextBox Name="TBuser" HorizontalAlignment="Left" Height="23" Margin="123,45,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="240"/>
+        
+        <Label Content="Password:" HorizontalAlignment="Left" Margin="56,72,0,0" VerticalAlignment="Top"/>
+        <PasswordBox Name="TBpass" HorizontalAlignment="Left" Margin="123,73,0,0" VerticalAlignment="Top" Width="240" Height="23"/>
+        
+        <CheckBox Name="CBWinCred" Content="Use Windows session credentials" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top"/>
+        <CheckBox Name="CBsaveCred" Content="Save credentials" HorizontalAlignment="Left" Margin="123,121,0,0" VerticalAlignment="Top"/>
+        
+        <Button Name="BAddServer" Content="add server" HorizontalAlignment="Left" Margin="10,158,0,0" VerticalAlignment="Top" Width="164"/>
+        <Button Name="BCancle" Content="cancle" HorizontalAlignment="Left" Margin="211,158,0,0" VerticalAlignment="Top" Width="152"/>
+    </Grid>
+</Window>
+'@
+  $winaddserver = Convert-XAMLtoWindow -XAML $xamladdserver -NamedElement 'BAddServer', 'BCancle', 'CBsaveCred', 'CBWinCred', 'TBnewServer', 'TBpass', 'TBuser' -PassThru
+  function Get-Popup
+  {
+    param(
+      $info,
+      $mes
+    )
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("$mes",0,"$info",0)
+  }
+  
+  function Get-ServerConnection
+  {
+    $srv = $winaddserver.TBnewServer.Text
+    if($srv -ne ''){
+      if(Test-Connection -ComputerName $srv -Count 1 -ErrorAction SilentlyContinue){
+        Write-Host 'ping ok'
+        if($true){ #creds prüfen
+          Write-Output $true
+        }
+        else{
+          Get-Popup -mes 'Server is empty' -info 'error'
+          Write-Output $false
+        }
+      }
+      else{
+        Get-Popup -mes "Could not connect to $srv" -info 'Ping error'
+        Write-Output $false
+      }
+    }
+    else{
+      Get-Popup -mes 'Server is empty' -info 'Input error'
+    }
+  }
+  
+  $winaddserver.CBWinCred.add_Checked{
+    $winaddserver.TBuser.IsEnabled = $false
+    $winaddserver.TBpass.IsEnabled = $false
+    $winaddserver.CBsaveCred.IsEnabled = $false
+    $winaddserver.TBuser.Text = ''
+    $winaddserver.TBpass.Password = ''
+  }
+  $winaddserver.CBWinCred.add_UnChecked{
+    $winaddserver.TBuser.IsEnabled = $true
+    $winaddserver.TBpass.IsEnabled = $true
+    $winaddserver.CBsaveCred.IsEnabled = $true
+  }
+  $winaddserver.CBsaveCred.add_Checked{
+    $winaddserver.CBWinCred.IsEnabled = $false
+  }
+  $winaddserver.CBsaveCred.add_UnChecked{
+    $winaddserver.CBWinCred.IsEnabled = $true
+  }
+
+  $winaddserver.BAddServer.add_Click{
+    Get-ServerConnection
+    <#if($winaddserver.CBWinCred.IsChecked -eq $true -or $winaddserver.CBsaveCred.IsChecked -eq $true){
+      Write-Host 'passt'
+      #$winaddserver.DialogResult = $true
+    }
+    else{
+      Write-Host 'neeee'
+    }#>  
+  }
+
+  $winaddserver.BCancle.add_Click{
+    $winaddserver.DialogResult = $false
+  }
+
+  $result = Show-WPFWindow -Window $winaddserver
+
+  if ($result -eq $true)
+  {
+    [PSCustomObject]@{
+      Server = $winaddserver.TBnewServer.Text
+      User = $winaddserver.TBuser.Text
+      Password = $winaddserver.TBpass.Password
+      WinCred = $winaddserver.CBWinCred.IsChecked
+      SaveCred = $winaddserver.CBsaveCred.IsChecked
+    }
+
+  }
+  else
+  {
+    Write-Warning 'User aborted dialog.'
+  }
+}
+function Get-NewVM
+{
+  $xamlnewvm = @'
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   Height="540"
+   Width ="500"
+   Title="Create Virtual Machine"
+   Topmost="True" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Label Content="Name" HorizontalAlignment="Left" Margin="30,39,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
+        <TextBox Name="textBox" HorizontalAlignment="Left" Height="37" Margin="36,78,0,0" TextWrapping="Wrap" Text="New Virtual Machine" VerticalAlignment="Top" Width="194" FontSize="16" Padding="11,4,0,0"/>
+        <Label Content="Operating System" HorizontalAlignment="Left" Margin="36,143,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
+        <Label Content="You can install from an ISO image file (.iso) or a virtual hard disk file (.vhd or .vhdx)." HorizontalAlignment="Left" Margin="36,182,0,0" VerticalAlignment="Top"/>
+        <Button Name="button" Content="Change installation source..." HorizontalAlignment="Left" Margin="113,213,0,0" VerticalAlignment="Top" Width="309" Height="43" FontSize="14"/>
+        <CheckBox Name="checkBox" Content="This virtual machine will run Windows (enables Windows Secure Boot)" HorizontalAlignment="Left" Margin="36,270,0,0" VerticalAlignment="Top"/>
+        <Label Content="Network" HorizontalAlignment="Left" Margin="36,317,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
+        <ComboBox Name="comboBox" HorizontalAlignment="Left" Margin="36,356,0,0" VerticalAlignment="Top" Width="194"/>
+        <Button Name="BCreateVM" Content="Create Virtual Machine" HorizontalAlignment="Left" Margin="30,447,0,0" VerticalAlignment="Top" Width="215" Height="40" FontSize="16" Foreground="White" Background="#FF1969DC"/>
+        <Button Name="BCloseVM" Content="Close" HorizontalAlignment="Left" Margin="256,447,0,0" VerticalAlignment="Top" Width="215" Height="40" FontSize="16"/>
+    </Grid>
+</Window>
+'@
+  $windowNewVM = Convert-XAMLtoWindow -XAML $xamlnewvm -NamedElement 'button', 'BCreateVM', 'BCloseVM', 'checkBox', 'comboBox', 'textBox' -PassThru
+  $resultNewVM = Show-WPFWindow -Window $windowNewVM
+}
+function Get-Options
+{
+  $xamloptions = @'
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   Height="400"
+   Width ="400"
+   Title="Options" ResizeMode="NoResize"
+   Topmost="True" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Label Content="Options..." HorizontalAlignment="Left" Margin="166,157,0,0" VerticalAlignment="Top"/>
+        <Button Name="BOptOK" Content="OK" HorizontalAlignment="Left" Margin="229,341,0,0" VerticalAlignment="Top" Width="75"/>
+        <Button Name="BOptCan" Content="Cancel" HorizontalAlignment="Left" Margin="309,341,0,0" VerticalAlignment="Top" Width="75"/>
+    </Grid>
+</Window>
+'@
+  $winoptions = Convert-XAMLtoWindow -XAML $xamloptions -NamedElement 'BOptCan', 'BOptOK' -PassThru
+
+  $winoptions.BOptOK.add_Click{
+    $winoptions.Close()
+  }
+  $winoptions.BOptCan.add_Click{
+    $winoptions.Close()
+  }
+
+  $result = Show-WPFWindow -Window $winoptions
+}
+function Get-About
+{
+  $xamlabout = @'
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   Height="400"
+   Width ="400"
+   Title="About" ResizeMode="NoResize"
+   Topmost="True" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TextBlock Name="github" HorizontalAlignment="Left" Margin="168,158,0,0" TextWrapping="Wrap" Text="github link" VerticalAlignment="Top" TextDecorations="Underline" Cursor="Hand"/>
+        <Button Name="BAbCan" Content="Cancel" HorizontalAlignment="Left" Margin="309,341,0,0" VerticalAlignment="Top" Width="75"/>
+    </Grid>
+</Window>
+'@
+  $winabout = Convert-XAMLtoWindow -XAML $xamlabout -NamedElement 'BAbCan', 'github' -PassThru
+
+  $winabout.github.add_MouseLeftButtonUp{
+    [System.Diagnostics.Process]::Start("https://github.com/psott/HVCP")
+  }
+  
+  $winabout.BAbCan.add_Click{
+    $winabout.Close()
+  }
+  
+  $result = Show-WPFWindow -Window $winabout
+}
+
+#endregion Windows
+
+
 #region XAML
 $xaml = @'
 <Window
    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-   Width="1000" MinWidth="1000"
+   Width="1150" MinWidth="1000"
    Height ="400" MinHeight ="400"
    SizeToContent="Height"
    Title="Hyper-V Console Plus 0.1"
-   Background="#FFCBCBCB">
+   Background="#FFCBCBCB" WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition MinWidth="150" Width="200" />
@@ -143,21 +341,19 @@ $xaml = @'
         <DockPanel Grid.ColumnSpan="3">
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
-                    <MenuItem Header="Options" />
-                    <MenuItem Header="Exit" />
+                    <MenuItem Name="MOptions" Header="Options" />
+                    <MenuItem Name="MExit" Header="Exit" />
                 </MenuItem>
                 <MenuItem Header="Action">
                     <MenuItem Name="MQuick" Header="Quick Create" />
-                    <MenuItem Header="..." />
-                    <MenuItem Header="..." />
                 </MenuItem>
                 <MenuItem Header="Help">
-                    <MenuItem Header="Abount Hyper-V Console Plus" />
+                    <MenuItem Name="MAbout" Header="About Hyper-V Console Plus" /> 
                 </MenuItem>
             </Menu>
         </DockPanel>
         <Grid Grid.Column="0" Grid.Row="1">
-          <ListView Name="lvs" Margin="5">
+          <ListView Name="lvs" Margin="5,5,5,30">
                 <ListView.ContextMenu>
                     <ContextMenu>
                         <MenuItem Name ="CMSConnect" Header="Connect"/>
@@ -171,6 +367,7 @@ $xaml = @'
                     </GridView>
                 </ListView.View>
             </ListView>
+            <Button Name="BAdd" Content="add server" HorizontalAlignment="Left" Margin="5,0,0,5" VerticalAlignment="Bottom" Width="65"/>
         </Grid>
         <GridSplitter Grid.Column="1" Grid.Row="1" Width="5" HorizontalAlignment="Stretch" />
         <Grid Grid.Column="2" Grid.Row="1">
@@ -205,32 +402,23 @@ $xaml = @'
     </Grid>
 </Window>
 '@
-$xamlnewvm = @'
-<Window
-   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-   Height="540"
-   Width ="500"
-   Title="Create Virtual Machine"
-   Topmost="True">
-    <Grid>
-        <Label Content="Name" HorizontalAlignment="Left" Margin="30,39,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
-        <TextBox x:Name="textBox" HorizontalAlignment="Left" Height="37" Margin="36,78,0,0" TextWrapping="Wrap" Text="New Virtual Machine" VerticalAlignment="Top" Width="194" FontSize="16" Padding="11,4,0,0"/>
-        <Label Content="Operating System" HorizontalAlignment="Left" Margin="36,143,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
-        <Label Content="You can install from an ISO image file (.iso) or a virtual hard disk file (.vhd or .vhdx)." HorizontalAlignment="Left" Margin="36,182,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="button" Content="Change installation source..." HorizontalAlignment="Left" Margin="113,213,0,0" VerticalAlignment="Top" Width="309" Height="43" FontSize="14"/>
-        <CheckBox x:Name="checkBox" Content="This virtual machine will run Windows (enables Windows Secure Boot)" HorizontalAlignment="Left" Margin="36,270,0,0" VerticalAlignment="Top"/>
-        <Label Content="Network" HorizontalAlignment="Left" Margin="36,317,0,0" VerticalAlignment="Top" Background="{x:Null}" Foreground="#FF2C92D8" FontSize="18"/>
-        <ComboBox x:Name="comboBox" HorizontalAlignment="Left" Margin="36,356,0,0" VerticalAlignment="Top" Width="194"/>
-        <Button x:Name="button1" Content="Create Virtual Machine" HorizontalAlignment="Left" Margin="30,447,0,0" VerticalAlignment="Top" Width="215" Height="40" FontSize="16" Foreground="White" Background="#FF1969DC"/>
-        <Button x:Name="button1_Copy" Content="Close" HorizontalAlignment="Left" Margin="256,447,0,0" VerticalAlignment="Top" Width="215" Height="40" FontSize="16"/>
-    </Grid>
-</Window>
-'@
+
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs', 'MQuick' -PassThru
-$windowNewVM = Convert-XAMLtoWindow -XAML $xamlnewvm -NamedElement 'button', 'button1', 'button1_Copy', 'checkBox', 'comboBox', 'textBox' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs','BAdd', 'MQuick' -PassThru
+
+$window.MOptions.add_Click{
+  Get-Options
+}
+$window.MExit.add_Click{
+  $window.Close()
+}
+$window.MAbout.add_Click{
+  Get-About
+}
+$window.MQuick.add_Click{
+  Get-NewVM
+}
 
 $window.CMConnect.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
@@ -278,14 +466,14 @@ $window.lv.add_MouseLeftButtonUp{
   }
 }
 
-$window.MQuick.add_Click{
-  $result = Show-WPFWindow -Window $windowNewVM
+$window.BAdd.add_Click{
+  Get-AddServer
 }
 
-$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
-$window.lvs.AddChild($lhname)
-Get-VMList -vmservers $lhname.Name
-Start-Timer
+#$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
+#$window.lvs.AddChild($lhname)
+#Get-VMList -vmservers $lhname.Name
+#Start-Timer
 
 $result = Show-WPFWindow -Window $window
 #$Script:timer.Stop()
