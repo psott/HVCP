@@ -1,7 +1,7 @@
 # HVCP
 Hyper-V Console Plus
 
-Hyper-V console rewritten in Powershell to add all the features i've allways wanted :)
+Hyper-V console rewritten in Powershell to add all the features we've allways wanted :)
 
 ![HVCP Gui](https://github.com/psott/HVCP/blob/master/assets/HVCP.png)
 
