@@ -1,6 +1,34 @@
 Import-Module -Name Hyper-V
 
+#delete from disk, delte vm
+
 #region Funktions
+function Get-Preferences
+{
+  if($PSVersionTable.PSVersion.Major -ge 4){
+    <#If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
+        $arguments = "& '" + $myinvocation.mycommand.definition + "'"
+        Start-Process powershell -Verb runAs -ArgumentList $arguments
+        Start-Sleep -Seconds 10
+        Stop-Process -Id $PID
+        }
+        else{
+        #ok
+    }#>
+  }
+  else{
+    Get-Popup -mes 'HVCP needs Powershell 4 or higher.' -info 'Old Powershell version'
+  }
+}
+function Get-Popup
+{
+    param(
+      $mes,  
+      $info
+    )
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("$mes",0,"$info",0)
+}
 function Convert-XAMLtoWindow
 {
   param
@@ -147,16 +175,7 @@ function Get-AddServer
 </Window>
 '@
   $winaddserver = Convert-XAMLtoWindow -XAML $xamladdserver -NamedElement 'BAddServer', 'BCancle', 'CBsaveCred', 'CBWinCred', 'TBnewServer', 'TBpass', 'TBuser' -PassThru
-  function Get-Popup
-  {
-    param(
-      $info,
-      $mes
-    )
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("$mes",0,"$info",0)
-  }
-  
+
   function Get-ServerConnection
   {
     $srv = $winaddserver.TBnewServer.Text
@@ -306,6 +325,22 @@ function Get-About
   
   $result = Show-WPFWindow -Window $winabout
 }
+function Get-VMSettings
+{
+  $xamlvmsettings = @'
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   Height="400" Width ="400" Title="Settings" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <TextBlock Name="textBlock" HorizontalAlignment="Left" Margin="182,174,0,0" TextWrapping="Wrap" Text="soon..." VerticalAlignment="Top"/>
+    </Grid>
+</Window>
+'@
+  $winvmsettings = Convert-XAMLtoWindow -XAML $xamlvmsettings -NamedElement 'textBlock' -PassThru
+
+  $result = Show-WPFWindow -Window $winvmsettings
+}
 
 #endregion Windows
 
@@ -371,8 +406,18 @@ $xaml = @'
                         <MenuItem Name ="CMStart" Header="Start"/>
                         <MenuItem Name ="CMRestart" Header="HardRestart"/>
                         <MenuItem Name ="CMShutdown" Header="Shutdown"/>
+                        <MenuItem Name ="CMPowerOff" Header="Power off"/>
                         <MenuItem Name ="CMSave" Header="Save (to disk)"/>
                         <MenuItem Name ="CMPause" Header="Pause (keep in RAM)"/>
+                        <Separator/>
+                        <MenuItem Name ="CMSnapshot" Header="Take Snapshot"/>
+                        <Separator/>
+                        <MenuItem Name ="CMMove" Header="Move"/>
+                        <MenuItem Name ="CMExport" Header="Export"/>
+                        <MenuItem Name ="CMDelete" Header="Delete"/>
+                        <MenuItem Name ="CMDeleteDisk" Header="Delete from disk"/>
+                        <Separator/>
+                        <MenuItem Name ="CMSettings" Header="Settings"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
                 <ListView.View>
@@ -397,7 +442,7 @@ $xaml = @'
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect', 'CMRestart', 'CMSave', 'CMShutdown', 'CMStart', 'image', 'lv','lvs','BAdd', 'MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -440,7 +485,10 @@ $window.CMRestart.add_Click{
 $window.CMShutdown.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
   Stop-VM -Name $selItem -AsJob #guest shutdown 
-  #Stop-VM -Name $selItem -TurnOff #
+}
+$window.CMPowerOff.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  Stop-VM -Name $selItem -TurnOff -AsJob #power down
 }
 $window.CMSave.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
@@ -450,35 +498,109 @@ $window.CMPause.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
   Suspend-VM -Name $selItem -AsJob #save in ram
 }
+$window.CMDelete.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  if((Get-VM -Name $selItem).state -ne "Off"){
+    Stop-VM -Name $selItem -TurnOff
+  }
+  Remove-VM -Name $selItem -AsJob -Force
+}
+$window.CMDeleteDisk.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  if((Get-VM -Name $selItem).state -ne "Off"){
+    Stop-VM -Name $selItem -TurnOff
+  }
+  if(Get-VMSnapshot -VMName $selItem){
+    Remove-VMSnapshot -VMName $selItem
+  }
+  $VHDs = (Get-VM -Name $selItem).Harddrives.Path
+  Remove-VM -Name $selItem -Force
+  Remove-Item $VHDs -ErrorAction SilentlyContinue
+}
+$window.CMSnapshot.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  Read-Host
+  Add-Type -AssemblyName Microsoft.VisualBasic
+  $SnapText = [Microsoft.VisualBasic.Interaction]::InputBox('Enter a name for the snapshot', 'Snapshot name', "New Snapshot")
+  Checkpoint-VM -Name $selItem -SnapshotName $SnapText -AsJob
+}
+$window.CMMove.add_Click{
+  Get-Popup -mes 'Not implemented yet' -info '(╯°□°）╯︵ ┻━┻'
+}
+$window.CMExport.add_Click{
+  Get-Popup -mes 'Not implemented yet' -info '(╯°□°）╯︵ ┻━┻'
+  
+}
+$window.CMSettings.add_Click{
+  $selItem = ($window.lv.SelectedItem).Name
+  Get-VMSettings
+}
 
 $window.lv.add_MouseRightButtonDown{
   $window.lv.SelectedItems.Clear()
-  $window.CMConnect.IsEnabled = $false
-  $window.CMRestart.IsEnabled = $false
-  $window.CMShutdown.IsEnabled = $false
-  $window.CMStart.IsEnabled = $false
-  $window.CMSave.IsEnabled = $false
-  $window.CMPause.IsEnabled = $false
+    $window.CMConnect.IsEnabled = $false
+    $window.CMStart.IsEnabled = $false
+    $window.CMRestart.IsEnabled = $false
+    $window.CMShutdown.IsEnabled = $false
+    $window.CMPowerOff.IsEnabled = $false
+    $window.CMSave.IsEnabled = $false
+    $window.CMPause.IsEnabled = $false
+    $window.CMSnapshot.IsEnabled = $false
+    $window.CMMove.IsEnabled = $false
+    $window.CMExport.IsEnabled = $false
+    $window.CMDelete.IsEnabled = $false
+    $window.CMDeleteDisk.IsEnabled = $false
+    $window.CMSettings.IsEnabled = $false
 }
 $window.lv.add_MouseRightButtonUp{
+  $window.CMConnect.IsEnabled = $true
+  $window.CMStart.IsEnabled = $true
+  $window.CMRestart.IsEnabled = $true
+  $window.CMShutdown.IsEnabled = $true
+  $window.CMPowerOff.IsEnabled = $true
+  $window.CMSave.IsEnabled = $true
+  $window.CMPause.IsEnabled = $true
+  $window.CMSnapshot.IsEnabled = $true
+  $window.CMMove.IsEnabled = $true
+  $window.CMExport.IsEnabled = $true
+  $window.CMDelete.IsEnabled = $true
+  $window.CMDeleteDisk.IsEnabled = $true
+  $window.CMSettings.IsEnabled = $true
+  
   $sel = $window.lv.SelectedItem
   if($sel.Name -ne $null){
-    #if($sel.State)
-    $window.CMConnect.IsEnabled = $true
-    $window.CMRestart.IsEnabled = $true
-    $window.CMShutdown.IsEnabled = $true
-    $window.CMStart.IsEnabled = $true
-    $window.CMSave.IsEnabled = $true
-    $window.CMPause.IsEnabled = $true
+    if($sel.State -eq 'Off'){
+      $window.CMRestart.IsEnabled = $false
+      $window.CMShutdown.IsEnabled = $false
+      $window.CMPowerOff.IsEnabled = $false
+      $window.CMSave.IsEnabled = $false
+      $window.CMPause.IsEnabled = $false
+    }
+    if($sel.State -eq 'Running'){
+      $window.CMStart.IsEnabled = $false
+    }
+    if($sel.State -eq 'Paused'){
+      $window.CMPause.IsEnabled = $false
+    }
+    if($sel.State -eq 'Saved'){
+      $window.CMSave.IsEnabled = $false
+    }
   }
   else{
     $window.lv.SelectedItems.Clear()
     $window.CMConnect.IsEnabled = $false
+    $window.CMStart.IsEnabled = $false
     $window.CMRestart.IsEnabled = $false
     $window.CMShutdown.IsEnabled = $false
-    $window.CMStart.IsEnabled = $false
+    $window.CMPowerOff.IsEnabled = $false
     $window.CMSave.IsEnabled = $false
     $window.CMPause.IsEnabled = $false
+    $window.CMSnapshot.IsEnabled = $false
+    $window.CMMove.IsEnabled = $false
+    $window.CMExport.IsEnabled = $false
+    $window.CMDelete.IsEnabled = $false
+    $window.CMDeleteDisk.IsEnabled = $false
+    $window.CMSettings.IsEnabled = $false
   }
 }
 
@@ -496,6 +618,7 @@ $window.BAdd.add_Click{
   $Script:timer.Start()
 }
 
+Get-Preferences
 $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
 $window.lvs.AddChild($lhname)
 Get-VMList -vmservers $lhname.Name
