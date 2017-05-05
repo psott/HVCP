@@ -485,7 +485,10 @@ $window.CMConnect.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
   Start-Process vmconnect -ArgumentList "localhost $selItem"
 }
-
+$window.lv.add_MouseDoubleClick{
+  $selItem = ($window.lv.SelectedItem).Name
+  Start-Process vmconnect -ArgumentList "localhost $selItem"
+}
 $window.CMStart.add_Click{
   $selItem = $window.lv.SelectedItem
   if($selItem.State -eq 'Paused'){
