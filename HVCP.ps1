@@ -1,22 +1,39 @@
 Import-Module -Name Hyper-V
 
-#delete from disk, delte vm
+If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
+  $arguments = "& '" + $myinvocation.mycommand.definition + "'"
+  Start-Process powershell -Verb runAs -ArgumentList $arguments
+  Stop-Process -Id $PID
+}
 
 #region Funktions
+function Set-Console
+{
+  param(
+    [switch]$show,
+    [switch]$hide
+  )
+  Add-Type -Name Window -Namespace Console -MemberDefinition '
+    [DllImport("Kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
+  '
+  $consolePtr = [Console.Window]::GetConsoleWindow()
+  if($show){
+    [Console.Window]::ShowWindow($consolePtr, 1)
+  }
+  if($hide){
+    [Console.Window]::ShowWindow($consolePtr, 0)
+  }
+  
+  
+}
+
 function Get-Preferences
 {
-  if($PSVersionTable.PSVersion.Major -ge 4){
-    <#If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
-        $arguments = "& '" + $myinvocation.mycommand.definition + "'"
-        Start-Process powershell -Verb runAs -ArgumentList $arguments
-        Start-Sleep -Seconds 10
-        Stop-Process -Id $PID
-        }
-        else{
-        #ok
-    }#>
-  }
-  else{
+  if(!($PSVersionTable.PSVersion.Major -ge 4)){
     Get-Popup -mes 'HVCP needs Powershell 4 or higher.' -info 'Old Powershell version'
   }
 }
@@ -618,11 +635,14 @@ $window.BAdd.add_Click{
   $Script:timer.Start()
 }
 
+Set-Console -hide
 Get-Preferences
+
 $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
 $window.lvs.AddChild($lhname)
 Get-VMList -vmservers $lhname.Name
 Start-Timer
+
 
 $result = Show-WPFWindow -Window $window
 $Script:timer.Stop()
