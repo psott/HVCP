@@ -1,4 +1,6 @@
 Import-Module -Name Hyper-V
+$Script:hvcpName = 'Hyper-V Console Plus'
+$Script:hvcpVersion = 'v0.1'
 
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
   $arguments = "& '" + $myinvocation.mycommand.definition + "'"
@@ -6,7 +8,33 @@ If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
   Stop-Process -Id $PID
 }
 
-#region Funktions
+#region Functions
+function Set-Overlay
+{
+  param(
+    [switch]$hide,
+    [switch]$show,
+    [string]$message
+  )
+  if($hide){
+    $window.overlay.Visibility = 'Hidden'
+    $window.overLogo.Visibility = 'Hidden'
+    $window.overVersion.Visibility = 'Hidden'
+    $window.overVersion.Text = ''
+    $window.overtext.Visibility = 'Hidden'
+    $window.overtext.Text = ''
+    
+  }
+  if($show){
+    $window.overlay.Visibility = 'Visible'
+    $window.overLogo.Visibility = 'Visible'
+    $window.overVersion.Visibility = 'Visible'
+    $window.overVersion.Text = "$Script:hvcpName $Script:hvcpVersion"
+    $window.overtext.Visibility = 'Visible'
+    $window.overtext.Text = $message
+  }
+  $window.Dispatcher.Invoke([Action]{},'Render')
+}
 function Set-Console
 {
   param(
@@ -186,8 +214,8 @@ function Get-AddServer
         <CheckBox Name="CBWinCred" Content="Use Windows session credentials" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top"/>
         <CheckBox Name="CBsaveCred" Content="Save credentials" HorizontalAlignment="Left" Margin="123,121,0,0" VerticalAlignment="Top"/>
         
-        <Button Name="BAddServer" Content="add server" HorizontalAlignment="Left" Margin="10,158,0,0" VerticalAlignment="Top" Width="164"/>
-        <Button Name="BCancle" Content="cancle" HorizontalAlignment="Left" Margin="211,158,0,0" VerticalAlignment="Top" Width="152"/>
+        <Button Name="BAddServer" IsDefault="True" Content="add server" HorizontalAlignment="Left" Margin="10,158,0,0" VerticalAlignment="Top" Width="164"/>
+        <Button Name="BCancle" IsDefault="True" Content="cancle" HorizontalAlignment="Left" Margin="211,158,0,0" VerticalAlignment="Top" Width="152"/>
     </Grid>
 </Window>
 '@
@@ -365,13 +393,13 @@ function Get-VMSettings
 #region XAML
 $xaml = @'
 <Window
-   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-   Width="1150" MinWidth="1000"
-   Height ="400" MinHeight ="400"
-   SizeToContent="Height"
-   Title="Hyper-V Console Plus 0.1"
-   Background="#FFCBCBCB" WindowStartupLocation="CenterScreen">
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Width="1150" MinWidth="1000"
+    Height ="400" MinHeight ="400"
+    SizeToContent="Height"
+    Title="Hyper-V Console Plus"
+    Background="#FFCBCBCB" WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition MinWidth="150" Width="200" />
@@ -454,12 +482,19 @@ $xaml = @'
             <Rectangle Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5" Fill="#FFBDBDBD"/>
             <Image x:Name="image" Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5"/>
         </Grid>
+
+        <Rectangle Name="overlay" Grid.ColumnSpan="3" Grid.RowSpan="3" Fill="#D8497199" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Visible"/>
+
+        <Path Name="overLogo" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Fill="#FFFCFCFC" Width="138" Height="138" Margin="0,-100,0,0" Visibility="Visible" RenderTransformOrigin="0.5,0.5" Data="F1 M 20,20L 56,20L 56,56L 20,56L 20,20 Z M 24,24L 24,52L 52,52L 52,24L 24,24 Z M 31,36L 36,36L 36,31L 40,31L 40,36L 45,36L 45,40L 40,40L 40,45L 36,45L 36,40L 31,40L 31,36 Z " />
+        <TextBlock Name="overVersion" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,70,0,0" TextWrapping="Wrap" Text="Hyper-V Console Plus " VerticalAlignment="Center" FontSize="20" Foreground="White" FontWeight="Bold" FontStyle="Italic" Visibility="Visible"/>
+        <TextBlock Name="overtext" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,150,0,0" TextWrapping="Wrap" Text="loading database . . . " VerticalAlignment="Center" FontSize="20" Foreground="White" Visibility="Visible"/>
+        
     </Grid>
 </Window>
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -489,6 +524,7 @@ $window.lv.add_MouseDoubleClick{
   $selItem = ($window.lv.SelectedItem).Name
   Start-Process vmconnect -ArgumentList "localhost $selItem"
 }
+
 $window.CMStart.add_Click{
   $selItem = $window.lv.SelectedItem
   if($selItem.State -eq 'Paused'){
@@ -552,8 +588,10 @@ $window.CMExport.add_Click{
   
 }
 $window.CMSettings.add_Click{
+  $Script:timer.Stop()
   $selItem = ($window.lv.SelectedItem).Name
   Get-VMSettings
+  $Script:timer.Start()
 }
 
 $window.lv.add_MouseRightButtonDown{
@@ -631,21 +669,23 @@ $window.lv.add_MouseLeftButtonUp{
     Get-VMScreenshot -HyperVParent localhost -HyperVGuest $sel.Name -xRes 640 -yRes 480
   }
 }
-
 $window.BAdd.add_Click{
   $Script:timer.Stop()
   Get-AddServer
   $Script:timer.Start()
 }
 
-Set-Console -hide
-Get-Preferences
 
-$lhname = Get-WmiObject -Class Win32_Computersystem | select Name
-$window.lvs.AddChild($lhname)
-Get-VMList -vmservers $lhname.Name
-Start-Timer
-
+$Window.Add_ContentRendered{    
+  Set-Console -hide
+  Set-Overlay -show -message 'connecting to Server ...'
+  Get-Preferences
+  $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
+  $window.lvs.AddChild($lhname)
+  Get-VMList -vmservers $lhname.Name
+  Start-Timer
+  Set-Overlay -hide
+}
 
 $result = Show-WPFWindow -Window $window
 $Script:timer.Stop()
