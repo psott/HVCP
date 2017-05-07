@@ -5,6 +5,10 @@ Hyper-V console rewritten in Powershell to add all the features we've allways wa
 
 ![HVCP Gui](https://github.com/psott/HVCP/blob/master/assets/HVCP.png)
 
+What does HVCP better then the original Hyper-V Console?
+- delete VMs with all dedicated files with one click
+- more to come ...
+
 ToDo's:
 - be able to connect to multiple servers
 - add "create new VM" function
