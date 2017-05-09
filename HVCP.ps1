@@ -377,65 +377,125 @@ function Get-VMSettings
   $xamlvmsettings = @'
 <Window
    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-   Height="410" MinHeight="410" Width ="400" MinWidth ="400"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   Height="410" MinHeight="410" Width ="500" MinWidth ="500"
     Title="Settings" WindowStartupLocation="CenterScreen">
     <Grid>
         <TextBlock HorizontalAlignment="Left" Margin="243,152,0,0" TextWrapping="Wrap" Text="soon..." VerticalAlignment="Top"/>
-        <ComboBox Name="VSvmname" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120"/>
+        <ComboBox x:Name="VSvmname" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120"/>
 
-        <ListView Name="VSlv2" HorizontalAlignment="Left" Margin="10,37,0,50" VerticalAlignment="Stretch" Width="120">
+        <ListView x:Name="VSlv2" HorizontalAlignment="Left" Margin="10,37,0,50" VerticalAlignment="Stretch" Width="120">
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M10.8,21.500014L22.3,21.500014 22.3,24.500016 24.7,24.500016 24.7,26.700018 8.4000001,26.700018 8.4000001,24.500016 10.8,24.500016z M1.9000006,1.8999996L1.9000006,17.600011 30.1,17.600011 30.1,1.8999996z M0,0L32,0 32,19.500013 0,19.500013z" />
-                    <TextBlock Margin="5,0,0,0">BIOS</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="BIOS"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M12.408653,6.1999965C12.408653,6.1999965 16.608697,8.7999954 19.308725,8.2999954 19.308725,8.2999957 20.608739,17.199991 12.408653,24.399988 4.2085681,17.099991 5.5085816,8.2999957 5.5085816,8.2999954 8.2086098,8.6999955 12.408653,6.1999965 12.408653,6.1999965z M12.408653,2.6999979C12.408653,2.6999979 6.4085913,6.3999968 2.5085506,5.6999969 2.5085506,5.6999969 0.608531,18.399991 12.408653,28.799985 24.308777,18.399991 22.308756,5.6999969 22.308756,5.6999969 18.508717,6.2999964 12.408653,2.6999979 12.408653,2.6999979z M12.408653,0L14.00867,0.99999905C15.608686,1.8999987,18.708719,3.3999977,20.708739,3.3999977L21.108744,3.3999977 24.208776,2.8999987 24.708781,5.9999967C24.808783,6.5999966,26.608802,19.59999,14.508675,30.199985L12.408653,31.999984 10.308632,30.199985C-1.7914944,19.59999,0.10852528,6.4999967,0.10852528,5.9999967L0.608531,2.8999987 3.7085629,3.3999977 4.1085672,3.3999977C6.1085877,3.3999977,9.5086232,1.7999983,10.808637,0.99999905z" />
-                    <TextBlock Margin="5,0,0,0">Security</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="Security"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M22.999985,6.0000229L22.999985,12.000023 24.999985,12.000023 24.999985,6.0000229z M14.999985,6.0000229L14.999985,12.000023 16.999985,12.000023 16.999985,6.0000229z M6.9999852,6.0000229L6.9999852,12.000023 8.9999847,12.000023 8.9999847,6.0000229z M20.999985,4.0000229L26.999985,4.0000229 26.999985,14.000023 20.999985,14.000023z M12.999985,4.0000229L18.999985,4.0000229 18.999985,14.000023 12.999985,14.000023z M4.9999852,4.0000229L10.999985,4.0000229 10.999985,14.000023 4.9999852,14.000023z M2,2L2,8.2669678C2.6410217,8.9699707,3,9.8809814,3,10.830017L3,11.169983C3,12.119019,2.6410217,13.029968,2,13.732971L2,20 4,20 4,19C4,17.346008 5.3460083,16 7,16 8.6540222,16 10,17.346008 10,19L10,20 13,20 13,19C13,17.346008 14.346008,16 16,16 17.654022,16 19,17.346008 19,19L19,20 22,20 22,19C22,17.346008 23.346008,16 25,16 26.654022,16 28,17.346008 28,19L28,20 30,20 30,13.732971C29.359009,13.029968,29,12.119019,29,11.169983L29,10.830017C29,9.8809814,29.359009,8.9699707,30,8.2669678L30,2z M0,0L32,0 32,9.1469727 31.649994,9.4469604C31.231018,9.8059692,31,10.296997,31,10.830017L31,11.169983C31,11.703003,31.231018,12.19397,31.649994,12.552979L32,12.852966 32,22 26,22 26,19C26,18.447998 25.550995,18 25,18 24.449005,18 24,18.447998 24,19L24,22 17,22 17,19C17,18.447998 16.550995,18 16,18 15.449005,18 15,18.447998 15,19L15,22 8,22 8,19C8,18.447998 7.5509949,18 7,18 6.4490051,18 6,18.447998 6,19L6,22 0,22 0,12.852966 0.3500061,12.552979C0.76901245,12.19397,1,11.703003,1,11.169983L1,10.830017C1,10.296997,0.76901245,9.8059692,0.3500061,9.4469604L0,9.1469727z"/>
-                    <TextBlock Margin="5,0,0,0">Memory</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="Memory"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M11.000003,10.999997L11.000003,20.999997 21.000003,20.999997 21.000003,10.999997z M9.0000027,8.9999969L23.000003,8.9999969 23.000003,22.999997 9.0000027,22.999997z M6.0000002,5.9999993L6.0000002,25.999999 26.000001,25.999999 26.000001,5.9999993z M6.0000002,0L7.9999998,0 7.9999998,3.9999995 15,3.9999995 15,0 17,0 17,3.9999995 24,3.9999995 24,0 26.000001,0 26.000001,3.9999995 28.000001,3.9999995 28.000001,7.9999998 32.000001,7.9999998 32.000001,9.9999993 28.000001,9.9999993 28.000001,15 32.000001,15 32.000001,17 28.000001,17 28.000001,22 32.000001,22 32.000001,24 28.000001,24 28.000001,27.999999 26.000001,27.999999 26.000001,31.999999 24,31.999999 24,27.999999 17,27.999999 17,31.999999 15,31.999999 15,27.999999 8.0000002,27.999999 8.0000002,31.999999 6.0000002,31.999999 6.0000002,27.999999 4,27.999999 4,24 0,24 0,22 4,22 4,17 0,17 0,15 4,15 4,9.9999999 0,9.9999999 0,7.9999998 4,7.9999998 4,3.9999995 6.0000002,3.9999995z"/>
-                    <TextBlock Margin="5,0,0,0">Processor</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="Processor"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M11.918032,18.540007C10.815031,18.540007 9.9180317,19.437006 9.9180317,20.540007 9.9180317,21.643007 10.815031,22.540007 11.918032,22.540007 13.021031,22.540007 13.918032,21.643007 13.918032,20.540007 13.918032,19.437006 13.021031,18.540007 11.918032,18.540007z M11.918032,17.540007C13.572031,17.540007 14.918032,18.886007 14.918032,20.540007 14.918032,22.194006 13.572031,23.540007 11.918032,23.540007 10.264031,23.540007 8.9180317,22.194006 8.9180317,20.540007 8.9180317,18.886007 10.264031,17.540007 11.918032,17.540007z M11.918032,12.006998C12.281032,12.006998 12.646032,12.029998 13.000032,12.073997 13.273033,12.109998 13.468034,12.359998 13.433033,12.633998 13.397034,12.907998 13.138033,13.095998 12.873033,13.066998 12.561032,13.026999 12.241032,13.006998 11.918032,13.006998 7.7640262,13.006998 4.3850222,16.386 4.3850222,20.540001 4.3850222,24.694002 7.7640262,28.073004 11.918032,28.073004 16.072036,28.073004 19.451041,24.694002 19.451041,20.540001 19.451041,17.709999 17.889039,15.143999 15.373035,13.843999 15.128036,13.716998 15.031035,13.414998 15.158035,13.169998 15.286036,12.922998 15.589036,12.830998 15.832036,12.954998 18.68204,14.427999 20.451041,17.334 20.451041,20.540001 20.451041,25.245003 16.623036,29.073004 11.918032,29.073004 7.2130256,29.073004 3.385021,25.245003 3.3850207,20.540001 3.385021,15.834999 7.2130256,12.006998 11.918032,12.006998z M16.497003,5.0240541C16.546391,5.0232878 16.596885,5.0299091 16.647132,5.0447221 16.912118,5.1217241 17.06511,5.3987308 16.988114,5.6637373L13.933269,16.169991C13.870273,16.387997 13.670283,16.529999 13.453294,16.529999 13.407296,16.529999 13.360299,16.524 13.313301,16.509998 13.049314,16.432997 12.895322,16.154991 12.973318,15.889984L16.027164,5.3847303C16.089723,5.1694126,16.282987,5.0273738,16.497003,5.0240541z M2.7669997,2C2.3439956,2,2.0000012,2.3439941,2.000001,2.7660065L2.000001,29.233994C2.0000012,29.656006,2.3439956,30,2.7669997,30L21.068006,30C21.49101,30,21.833997,29.656006,21.833997,29.233994L21.833997,2.7660065C21.833997,2.3439941,21.49101,2,21.068006,2z M2.7669997,0L21.068006,0C22.593001,0,23.833999,1.2409973,23.833999,2.7660065L23.833999,29.233994C23.833999,30.759003,22.593001,32,21.068006,32L2.7669997,32C1.2419746,32,1.7007551E-08,30.759003,0,29.233994L0,2.7660065C1.7007551E-08,1.2409973,1.2419746,0,2.7669997,0z"/>
-                    <TextBlock Margin="5,0,0,0">Drives</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="Drives"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M22,24L22,30 30,30 30,24z M2,24L2,30 10,30 10,24z M10,2L10,10 22,10 22,2z M8,0L24,0 24,12 17,12 17,16 26,16 27,16.000008 27,22 32,22 32,32 20,32 20,22 25,22 25,18 7,18 7,22 12,22 12,32 0,32 0,22 5,22 5,16 6.011013,16 7,16 15,16 15,12 8,12z"/>
-                    <TextBlock Margin="5,0,0,0">Drives</TextBlock>
+                    <TextBlock Margin="5,0,0,0"><Run Text="Network"/></TextBlock>
                 </StackPanel>
             </ListViewItem>
         </ListView>
 
-        <Button Name="VSok" Content="ok" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" Width="75"/>
-        <Button Name="VScan" Content="cancel" HorizontalAlignment="Right" Margin="0,0,90,10" VerticalAlignment="Bottom" Width="75"/>
-        <Button Name="VSapp" Content="apply" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="75"/>
+        <Button x:Name="VSok" Content="ok" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" Width="75"/>
+        <Button x:Name="VScan" Content="cancel" HorizontalAlignment="Right" Margin="0,0,90,10" VerticalAlignment="Bottom" Width="75"/>
+        <Button x:Name="VSapp" Content="apply" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="75"/>
+        <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" Margin="150,15,5,45" VerticalAlignment="Stretch" BorderBrush="{x:Null}" >
+            <TabItem Header="1">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="BIOS soon..." VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="2">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Sec soon..." VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="3">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Mem soon..." VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="4">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Number of virtual processors:" VerticalAlignment="Top"/>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Height="20" Width="70" Orientation="Horizontal" Margin="251,6,0,0">
+                        <TextBox Name="CPUcores" IsReadOnly="True" Width="30" Text="1"/>
+                        <Button Name="CPUup" Content="˄" Width="20" />
+                        <Button Name="CPUdown" Content="˅" Width="20" />
+                    </StackPanel>
+                    <Separator Height="10" Width="311"  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,27,0,0"/>
+                    <CheckBox Name="CBnested"  HorizontalAlignment="Left" VerticalAlignment="Top" Content="Enable nested virtualisation" Margin="10,42,0,0"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="5">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Drive soon..." VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="6">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Net soon..." VerticalAlignment="Top"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <Rectangle Fill="White" HorizontalAlignment="Stretch" Height="25" Margin="150,13,5,0" VerticalAlignment="Top"/>
     </Grid>
 </Window>
 '@
-  $winvmsettings = Convert-XAMLtoWindow -XAML $xamlvmsettings -NamedElement 'VSapp', 'VScan', 'VSlv2', 'VSok', 'VSvmname' -PassThru
-
-  $winvmsettings.VSlv2.add_SelectionChanged{
-    #
+  $winvmsettings = Convert-XAMLtoWindow -XAML $xamlvmsettings -NamedElement 'CBnested', 'CPUcores', 'CPUdown', 'CPUup', 'tabControl', 'VSapp', 'VScan', 'VSlv2', 'VSok', 'VSvmname' -PassThru
+  $winvmsettings.CPUup.add_Click{
+    [int]$current = $winvmsettings.CPUcores.Text
+    if($current -le 15){
+      $winvmsettings.CPUcores.Text = $current + 1 
+    }  
   }
-
-
-$result = Show-WPFWindow -Window $winvmsettings
+  $winvmsettings.CPUdown.add_Click{
+    [int]$current = $winvmsettings.CPUcores.Text
+    if($current -ge 2){
+      $winvmsettings.CPUcores.Text = $current - 1
+    }
+  }
+  $winvmsettings.VSvmname.add_SelectionChanged{
+    $winvmsettings.Title = "Settings for $($winvmsettings.VSvmname.SelectedItem)"
+  }
+  $winvmsettings.VSlv2.add_SelectionChanged{
+    $winvmsettings.tabControl.SelectedIndex = $winvmsettings.VSlv2.SelectedIndex
+  }
+  $winvmsettings.VSlv2.SelectedIndex = 0
+  
+  $selHost = ($window.lvs.SelectedItem).Name
+  Get-VM -ComputerName $selHost | select -ExpandProperty Name | foreach{$winvmsettings.VSvmname.AddChild($_)}
+  $winvmsettings.VSvmname.SelectedItem = $window.lv.SelectedItem.Name
+  $winvmsettings.Title = "Settings for $($window.lv.SelectedItem.Name)"
+  
+  $result = Show-WPFWindow -Window $winvmsettings
 }
 
 #endregion Windows
@@ -731,7 +791,7 @@ $window.BAdd.add_Click{
 
 
 $Window.Add_ContentRendered{    
-  Set-Console -hide
+  #Set-Console -hide
   Set-Overlay -show -message 'connecting to Server ...'
   Get-Preferences
   $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
