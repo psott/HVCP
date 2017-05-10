@@ -163,25 +163,48 @@ function Get-VMList
 {
   $selIndex = $window.lv.SelectedIndex
   $window.lv.Items.Clear()
-  $selHost = ($window.lvs.SelectedItem).Name
-  if($selHost -ne $null){
-    $GetVM = Get-VM -ComputerName $selHost | ForEach-Object {
-      $ma = ($_.MemoryAssigned)/1MB
-      $md = ($_.MemoryDemand)/1MB
-      $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
-      [PSCustomObject]@{
-        Name = $_.Name
-        State = $_.State
-        Uptime = $ut
-        ProcessorCount = $_.ProcessorCount
-        CPUUsage = $_.CPUUsage
-        MemoryAssigned = $ma
-        MemoryDemand = $md
-        Version = $_.Version
-        VirtualMachineSubType = $_.VirtualMachineSubType
+  $selHost = $window.lvs.SelectedItem
+  if($selHost.Name -ne $null){
+    if(($selHost.Name -eq 'localhost') -or ($selHost.Name -eq (gwmi win32_computersystem).Name)){
+      $GetVM = Get-VM -ComputerName $selHost.Name | ForEach-Object {
+        $ma = ($_.MemoryAssigned)/1MB
+        $md = ($_.MemoryDemand)/1MB
+        $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
+        [PSCustomObject]@{
+          Name = $_.Name
+          State = $_.State
+          Uptime = $ut
+          ProcessorCount = $_.ProcessorCount
+          CPUUsage = $_.CPUUsage
+          MemoryAssigned = $ma
+          MemoryDemand = $md
+          Version = $_.Version
+          VirtualMachineSubType = $_.VirtualMachineSubType
+        }
       }
+      $GetVM | ForEach-Object {$window.lv.AddChild($_)}
     }
-    $GetVM | ForEach-Object {$window.lv.AddChild($_)}
+    else{
+      $cred = New-Object System.Management.Automation.PSCredential ($selHost.UserName, $selHost.Password)
+      $ncs = New-CimSession -ComputerName $selHost.Name -Credential $cred
+      $GetVM = Get-VM -CimSession $ncs | ForEach-Object {
+        $ma = ($_.MemoryAssigned)/1MB
+        $md = ($_.MemoryDemand)/1MB
+        $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
+        [PSCustomObject]@{
+          Name = $_.Name
+          State = $_.State
+          Uptime = $ut
+          ProcessorCount = $_.ProcessorCount
+          CPUUsage = $_.CPUUsage
+          MemoryAssigned = $ma
+          MemoryDemand = $md
+          Version = $_.Version
+          VirtualMachineSubType = $_.VirtualMachineSubType
+        }
+      }
+      $GetVM | ForEach-Object {$window.lv.AddChild($_)}
+    }
   }
   $window.lv.SelectedIndex = $selIndex
 }
@@ -791,7 +814,7 @@ $window.BAdd.add_Click{
 
 
 $Window.Add_ContentRendered{    
-  #Set-Console -hide
+  Set-Console -hide
   Set-Overlay -show -message 'connecting to Server ...'
   Get-Preferences
   $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
