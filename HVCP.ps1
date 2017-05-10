@@ -2,6 +2,15 @@ Import-Module -Name Hyper-V
 $Script:hvcpName = 'Hyper-V Console Plus'
 $Script:hvcpVersion = 'v0.1'
 
+if (Get-Module -ListAvailable -Name Hyper-V) {
+    Import-Module -Name Hyper-V
+}
+else {
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("The Hyper-V module ist not availible on this Computer.`nScript will terminate",0,'Module not found',0)
+    Stop-Process -Id $PID
+}
+
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
   $arguments = "& '" + $myinvocation.mycommand.definition + "'"
   Start-Process powershell -Verb runAs -ArgumentList $arguments
