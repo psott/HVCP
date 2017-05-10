@@ -401,13 +401,13 @@ function Get-VMSettings
 <Window
    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-   Height="410" MinHeight="410" Width ="500" MinWidth ="500"
+   Height="410" MinHeight="410" Width ="550" MinWidth ="550"
     Title="Settings" WindowStartupLocation="CenterScreen">
     <Grid>
         <TextBlock HorizontalAlignment="Left" Margin="243,152,0,0" TextWrapping="Wrap" Text="soon..." VerticalAlignment="Top"/>
-        <ComboBox x:Name="VSvmname" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120"/>
+        <ComboBox Name="VSvmname" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120"/>
 
-        <ListView x:Name="VSlv2" HorizontalAlignment="Left" Margin="10,37,0,50" VerticalAlignment="Stretch" Width="120">
+        <ListView Name="VSlv2" HorizontalAlignment="Left" Margin="10,37,0,50" VerticalAlignment="Stretch" Width="120">
             <ListViewItem>
                 <StackPanel Orientation="Horizontal">
                     <Path Width="15" Height="15" Stretch="Uniform" Fill="Black" Data="M10.8,21.500014L22.3,21.500014 22.3,24.500016 24.7,24.500016 24.7,26.700018 8.4000001,26.700018 8.4000001,24.500016 10.8,24.500016z M1.9000006,1.8999996L1.9000006,17.600011 30.1,17.600011 30.1,1.8999996z M0,0L32,0 32,19.500013 0,19.500013z" />
@@ -446,13 +446,16 @@ function Get-VMSettings
             </ListViewItem>
         </ListView>
 
-        <Button x:Name="VSok" Content="ok" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" Width="75"/>
-        <Button x:Name="VScan" Content="cancel" HorizontalAlignment="Right" Margin="0,0,90,10" VerticalAlignment="Bottom" Width="75"/>
-        <Button x:Name="VSapp" Content="apply" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="75"/>
-        <TabControl x:Name="tabControl" HorizontalAlignment="Stretch" Margin="150,15,5,45" VerticalAlignment="Stretch" BorderBrush="{x:Null}" >
+        <Button Name="VSok" Content="ok" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" Width="75"/>
+        <Button Name="VScan" Content="cancel" HorizontalAlignment="Right" Margin="0,0,90,10" VerticalAlignment="Bottom" Width="75"/>
+        <Button Name="VSapp" Content="apply" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="75"/>
+        <TabControl Name="tabControl" HorizontalAlignment="Stretch" Margin="130,15,5,45" VerticalAlignment="Stretch" BorderBrush="{x:Null}" >
             <TabItem Header="1">
                 <Grid>
-                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="BIOS soon..." VerticalAlignment="Top"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="Select the order in wich boot devices are checked to start the operating system:" VerticalAlignment="Top" Width="381"/>
+                    <ListBox Name="Bootorder" HorizontalAlignment="Left" Height="81" Margin="10,37,0,0" VerticalAlignment="Top" Width="301"/>
+                    <Button Name="Bootup" Content="move up" HorizontalAlignment="Left" Margin="316,37,0,0" VerticalAlignment="Top" Width="75"/>
+                    <Button Name="Bootdown" Content="move down" HorizontalAlignment="Left" Margin="316,62,0,0" VerticalAlignment="Top" Width="75"/>
                 </Grid>
             </TabItem>
             <TabItem Header="2">
@@ -462,13 +465,16 @@ function Get-VMSettings
             </TabItem>
             <TabItem Header="3">
                 <Grid>
-                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Mem soon..." VerticalAlignment="Top"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="Specify the amount of memory that this virtual machine can use:" VerticalAlignment="Top" Width="381"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,28,0,0" TextWrapping="Wrap" Text="RAM:" VerticalAlignment="Top"/>
+                    <TextBox Name="VMram" MaxLength="6" HorizontalAlignment="Left" Height="23" Margin="63,27,0,0" TextWrapping="Wrap" Text="1024" VerticalAlignment="Top" Width="50"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="118,28,0,0" TextWrapping="Wrap" Text="MB" VerticalAlignment="Top"/>
                 </Grid>
             </TabItem>
             <TabItem Header="4">
                 <Grid>
-                    <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Number of virtual processors:" VerticalAlignment="Top"/>
-                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Height="20" Width="70" Orientation="Horizontal" Margin="251,6,0,0">
+                    <TextBlock HorizontalAlignment="Left" Margin="10,3,0,0" TextWrapping="Wrap" Text="Number of virtual processors:" VerticalAlignment="Top"/>
+                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Height="20" Width="70" Orientation="Horizontal" Margin="321,2,0,0">
                         <TextBox Name="CPUcores" IsReadOnly="True" Width="30" Text="1"/>
                         <Button Name="CPUup" Content="˄" Width="20" />
                         <Button Name="CPUdown" Content="˅" Width="20" />
@@ -484,15 +490,17 @@ function Get-VMSettings
             </TabItem>
             <TabItem Header="6">
                 <Grid>
-                    <TextBlock HorizontalAlignment="Left" Margin="52,43,0,0" TextWrapping="Wrap" Text="Net soon..." VerticalAlignment="Top"/>
+                    <TextBlock HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="Specify the configuration of the network adapter or remove it:" VerticalAlignment="Top" Width="381"/>
+                    <ComboBox Name="NetAdapter" HorizontalAlignment="Left" Margin="10,33,0,0" VerticalAlignment="Top" Width="246"/>
                 </Grid>
             </TabItem>
         </TabControl>
-        <Rectangle Fill="White" HorizontalAlignment="Stretch" Height="25" Margin="150,13,5,0" VerticalAlignment="Top"/>
+        <Rectangle Fill="White" HorizontalAlignment="Stretch" Height="25" Margin="132,13,5,0" VerticalAlignment="Top"/>
     </Grid>
 </Window>
 '@
-  $winvmsettings = Convert-XAMLtoWindow -XAML $xamlvmsettings -NamedElement 'CBnested', 'CPUcores', 'CPUdown', 'CPUup', 'tabControl', 'VSapp', 'VScan', 'VSlv2', 'VSok', 'VSvmname' -PassThru
+  $winvmsettings = Convert-XAMLtoWindow -XAML $xamlvmsettings -NamedElement 'Bootdown', 'Bootorder', 'Bootup', 'CBnested', 'CPUcores', 'CPUdown', 'CPUup', 'NetAdapter', 'tabControl', 'VMram', 'VSapp', 'VScan', 'VSlv2', 'VSok', 'VSvmname' -PassThru
+  
   $winvmsettings.CPUup.add_Click{
     [int]$current = $winvmsettings.CPUcores.Text
     if($current -le 15){
