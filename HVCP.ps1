@@ -1,14 +1,13 @@
-Import-Module -Name Hyper-V
 $Script:hvcpName = 'Hyper-V Console Plus'
 $Script:hvcpVersion = 'v0.1'
 
 if (Get-Module -ListAvailable -Name Hyper-V) {
-    Import-Module -Name Hyper-V
+  Import-Module -Name Hyper-V
 }
 else {
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("The Hyper-V module ist not availible on this Computer.`nScript will terminate",0,'Module not found',0)
-    Stop-Process -Id $PID
+  $wshell = New-Object -ComObject Wscript.Shell
+  $wshell.Popup("The Hyper-V module ist not availible on this Computer.`nScript will terminate",0,'Module not found',0)
+  Stop-Process -Id $PID
 }
 
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")){
@@ -651,7 +650,6 @@ $window.MOptions.add_Click{
   $Script:timer.Stop()
   Get-Options
   $Script:timer.Start()
-  
 }
 $window.MExit.add_Click{
   $window.Close()
@@ -676,53 +674,80 @@ $window.lv.add_MouseDoubleClick{
   Start-Process vmconnect -ArgumentList "localhost $selItem"
 }
 
+function Set-VMState
+{
+  param(
+    $state
+  )
+  $VMName = ($window.lv.SelectedItem).Name
+  $VMState = ($window.lv.SelectedItem).State
+  switch ($state){
+    'start' {
+      if($VMState -eq 'Paused'){
+        Resume-VM -Name $VMName -AsJob
+      }
+      else{
+        Start-VM -Name $VMName -AsJob
+      }
+    }
+    'restart' {
+      Restart-VM -Name $VMName -Force -AsJob #hardreset
+    }
+    'shutdown' {
+      Stop-VM -Name $VMName -AsJob #guest shutdown 
+    }
+    'poweroff' {
+      Stop-VM -Name $VMName -TurnOff -AsJob #power down
+    }
+    'savetodisk' {
+      Save-VM -Name $VMName -AsJob #save to disk
+    }
+    'savetoram' {
+      Suspend-VM -Name $VMName -AsJob #save in ram
+    }
+    'delete' {
+      if($VMState -ne "Off"){
+        Stop-VM -Name $VMName -TurnOff
+      }
+      Remove-VM -Name $VMName -AsJob -Force
+    }
+    'deletefromdisk' {
+      if($VMState -ne "Off"){
+        Stop-VM -Name $VMName -TurnOff
+      }
+      if(Get-VMSnapshot -VMName $VMName){
+        Remove-VMSnapshot -VMName $VMName
+      }
+      $VHDs = (Get-VM -Name $VMName).Harddrives.Path
+      Remove-VM -Name $VMName -Force
+      Remove-Item $VHDs -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 $window.CMStart.add_Click{
-  $selItem = $window.lv.SelectedItem
-  if($selItem.State -eq 'Paused'){
-    Resume-VM -Name $selItem.Name -AsJob
-  }
-  else{
-    Start-VM -Name $selItem.Name -AsJob
-  }
+  Set-VMState -state start
 }
 $window.CMRestart.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Restart-VM -Name $selItem -Force -AsJob #hardreset
+  Set-VMState -state restart
 }
 $window.CMShutdown.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Stop-VM -Name $selItem -AsJob #guest shutdown 
+  Set-VMState -state shutdown
 }
 $window.CMPowerOff.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Stop-VM -Name $selItem -TurnOff -AsJob #power down
+  Set-VMState -state poweroff
 }
 $window.CMSave.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Save-VM -Name $selItem -AsJob #save to disk
+  Set-VMState -state savetodisk
 }
 $window.CMPause.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  Suspend-VM -Name $selItem -AsJob #save in ram
+  Set-VMState -state savetoram
 }
 $window.CMDelete.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  if((Get-VM -Name $selItem).state -ne "Off"){
-    Stop-VM -Name $selItem -TurnOff
-  }
-  Remove-VM -Name $selItem -AsJob -Force
+  Set-VMState -state delete
 }
 $window.CMDeleteDisk.add_Click{
-  $selItem = ($window.lv.SelectedItem).Name
-  if((Get-VM -Name $selItem).state -ne "Off"){
-    Stop-VM -Name $selItem -TurnOff
-  }
-  if(Get-VMSnapshot -VMName $selItem){
-    Remove-VMSnapshot -VMName $selItem
-  }
-  $VHDs = (Get-VM -Name $selItem).Harddrives.Path
-  Remove-VM -Name $selItem -Force
-  Remove-Item $VHDs -ErrorAction SilentlyContinue
+  Set-VMState -state deletefromdisk
 }
 $window.CMSnapshot.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
@@ -736,7 +761,6 @@ $window.CMMove.add_Click{
 }
 $window.CMExport.add_Click{
   Get-Popup -mes 'Not implemented yet' -info '(╯°□°）╯︵ ┻━┻'
-  
 }
 $window.CMSettings.add_Click{
   $Script:timer.Stop()
@@ -830,7 +854,7 @@ $window.BAdd.add_Click{
 }
 
 
-$Window.Add_ContentRendered{    
+$Window.Add_ContentRendered{
   Set-Console -hide
   Set-Overlay -show -message 'connecting to Server ...'
   Get-Preferences
