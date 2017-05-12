@@ -606,6 +606,7 @@ $xaml = @'
                         <MenuItem Name ="CMPause" Header="Pause (keep in RAM)"/>
                         <Separator/>
                         <MenuItem Name ="CMSnapshot" Header="Take Snapshot"/>
+                        <MenuItem Name ="CMSnapshotMngr" Header="Snapshot Manager"/>
                         <Separator/>
                         <MenuItem Name ="CMMove" Header="Move"/>
                         <MenuItem Name ="CMExport" Header="Export"/>
@@ -644,7 +645,7 @@ $xaml = @'
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMSnapshotMngr','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -751,10 +752,12 @@ $window.CMDeleteDisk.add_Click{
 }
 $window.CMSnapshot.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
-  Read-Host
   Add-Type -AssemblyName Microsoft.VisualBasic
   $SnapText = [Microsoft.VisualBasic.Interaction]::InputBox('Enter a name for the snapshot', 'Snapshot name', "New Snapshot")
   Checkpoint-VM -Name $selItem -SnapshotName $SnapText -AsJob
+}
+$window.CMSnapshotMngr.add_Click{
+  #
 }
 $window.CMMove.add_Click{
   Get-Popup -mes 'Not implemented yet' -info '(╯°□°）╯︵ ┻━┻'
