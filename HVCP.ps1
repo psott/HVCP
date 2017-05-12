@@ -717,11 +717,11 @@ function Set-VMState
         Stop-VM -Name $VMName -TurnOff
       }
       if(Get-VMSnapshot -VMName $VMName){
-        Remove-VMSnapshot -VMName $VMName
+        Remove-VMSnapshot -VMName $VMName -IncludeAllChildSnapshots
       }
-      $VHDs = (Get-VM -Name $VMName).Harddrives.Path
+      $VHDs = (Get-VM -VMName $VMName | Select-Object VMId | Get-VHD).Path
       Remove-VM -Name $VMName -Force
-      Remove-Item $VHDs -ErrorAction SilentlyContinue
+      Remove-Item $VHDs
     }
   }
 }
