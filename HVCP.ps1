@@ -63,14 +63,57 @@ function Set-Console
   if($hide){
     [Console.Window]::ShowWindow($consolePtr, 0)
   }
-  
-  
 }
 
-function Get-Preferences
+function Set-Preferences
 {
   if(!($PSVersionTable.PSVersion.Major -ge 4)){
     Get-Popup -mes 'HVCP needs Powershell 4 or higher.' -info 'Old Powershell version'
+    Stop-Process -Id $PID
+  }
+  if(!(Test-Path "$env:Temp\HVCP")){
+    $null = New-Item -Path "$env:Temp\HVCP" -ItemType Directory
+  }
+  if(!(Test-Path "$env:APPDATA\HVCP")){
+    $null = New-Item -Path "$env:APPDATA\HVCP" -ItemType Directory
+  }
+}
+function Get-Profile
+{
+  if(Test-Path -Path "$env:APPDATA\HVCP\$env:USERNAME.xml"){
+    Import-Clixml -Path "$env:APPDATA\HVCP\$env:USERNAME.xml" | ForEach-Object{
+      $window.lvs.AddChild($_)
+    }
+    Start-Timer
+    Set-Overlay -hide
+  }
+  else{
+    Start-Timer
+    Set-Overlay -hide
+    #Get-AddServer
+    
+    ### work in progress
+    $window.lvs.Items.Clear()
+    $srv = [PSCustomObject]@{
+      Server = 'localhost'
+      User = ''
+      Password = ''
+    }
+    $window.lvs.AddChild($srv)
+    ###
+  }
+
+}
+function Set-Profile
+{
+  $HostList = $window.lvs.Items
+  if($HostList.count -gt 0){
+    $HostList | Export-Clixml -Path "$env:APPDATA\HVCP\$env:USERNAME.xml"
+  }
+  else{
+    if(Test-Path -Path "$env:APPDATA\HVCP\$env:USERNAME.xml"){
+      Remove-Item -Path "$env:APPDATA\HVCP\$env:USERNAME.xml" -Force
+    }
   }
 }
 function Get-Popup
@@ -172,9 +215,9 @@ function Get-VMList
   $selIndex = $window.lv.SelectedIndex
   $window.lv.Items.Clear()
   $selHost = $window.lvs.SelectedItem
-  if($selHost.Name -ne $null){
-    if(($selHost.Name -eq 'localhost') -or ($selHost.Name -eq (gwmi win32_computersystem).Name)){
-      $GetVM = Get-VM -ComputerName $selHost.Name | ForEach-Object {
+  if($selHost.Server -ne $null){
+    if(($selHost.Server -eq 'localhost') -or ($selHost.Server -eq (Get-WmiObject win32_computersystem).Name)){
+      $GetVM = Get-VM -ComputerName $selHost.Server | ForEach-Object {
         $ma = ($_.MemoryAssigned)/1MB
         $md = ($_.MemoryDemand)/1MB
         $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
@@ -194,7 +237,7 @@ function Get-VMList
     }
     else{
       $cred = New-Object System.Management.Automation.PSCredential ($selHost.UserName, $selHost.Password)
-      $ncs = New-CimSession -ComputerName $selHost.Name -Credential $cred
+      $ncs = New-CimSession -ComputerName $selHost.Server -Credential $cred
       $GetVM = Get-VM -CimSession $ncs | ForEach-Object {
         $ma = ($_.MemoryAssigned)/1MB
         $md = ($_.MemoryDemand)/1MB
@@ -229,6 +272,7 @@ function Start-Timer
 #region Windows
 function Get-AddServer
 {
+  $Script:timer.Stop()
   $xamladdserver = @'
 <Window
    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -259,9 +303,8 @@ function Get-AddServer
     $srv = $winaddserver.TBnewServer.Text
     if($srv -ne ''){
       if(Test-Connection -ComputerName $srv -Count 1 -ErrorAction SilentlyContinue){
-        Write-Host 'ping ok'
         if($true){ #creds prüfen
-          Write-Output $true
+          $winaddserver.DialogResult = $true
         }
         else{
           Get-Popup -mes 'Server is empty' -info 'error'
@@ -306,21 +349,14 @@ function Get-AddServer
   }
 
   $result = Show-WPFWindow -Window $winaddserver
-
-  if ($result -eq $true)
-  {
-    [PSCustomObject]@{
-      Server = $winaddserver.TBnewServer.Text
-      User = $winaddserver.TBuser.Text
-      Password = $winaddserver.TBpass.Password
-      WinCred = $winaddserver.CBWinCred.IsChecked
-      SaveCred = $winaddserver.CBsaveCred.IsChecked
-    }
+  [PSCustomObject]@{
+    Server = $winaddserver.TBnewServer.Text
+    User = $winaddserver.TBuser.Text
+    Password = $winaddserver.TBpass.Password
+    WinCred = $winaddserver.CBWinCred.IsChecked
+    SaveCred = $winaddserver.CBsaveCred.IsChecked
   }
-  else
-  {
-    #Write-Warning 'User aborted dialog.'
-  }
+  $Script:timer.Start()
 }
 function Get-NewVM
 {
@@ -530,7 +566,7 @@ function Get-VMSettings
   $winvmsettings.VSlv2.SelectedIndex = 0
   
   $selHost = ($window.lvs.SelectedItem).Name
-  Get-VM -ComputerName $selHost | select -ExpandProperty Name | foreach{$winvmsettings.VSvmname.AddChild($_)}
+  Get-VM -ComputerName $selHost | Select-Object -ExpandProperty Name | ForEach-Object{$winvmsettings.VSvmname.AddChild($_)}
   $winvmsettings.VSvmname.SelectedItem = $window.lv.SelectedItem.Name
   $winvmsettings.Title = "Settings for $($window.lv.SelectedItem.Name)"
   
@@ -578,14 +614,13 @@ $xaml = @'
           <ListView Name="lvs" Margin="5,5,5,30">
                 <ListView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Name ="CMSConnect" Header="Connect"/>
+                        <MenuItem Name ="CMSAddServer" Header="Connect"/>
                         <MenuItem Name ="CMSDisconnect" Header="Disconnect"/>
-                        <MenuItem Name ="CMSDelete" Header="Delete"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding 'Name'}" Width="180"/>
+                        <GridViewColumn Header="Server" DisplayMemberBinding="{Binding 'Server'}" Width="180"/>
                     </GridView>
                 </ListView.View>
             </ListView>
@@ -645,7 +680,7 @@ $xaml = @'
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDelete','CMSDisconnect','CMSConnect','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMSnapshotMngr','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDisconnect','CMSAddServer','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMSnapshotMngr','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -665,7 +700,16 @@ $window.MQuick.add_Click{
   Get-NewVM
   $Script:timer.Start()
 }
-
+$window.CMSDisconnect.add_Click{
+  $selHost = $window.lvs.SelectedItem
+  $window.lvs.Items.Remove($selHost)
+}
+$window.CMSAddServer.add_Click{
+  #$Script:timer.Stop()
+  $a = Get-AddServer
+  Write-Host $a
+  #$Script:timer.Start()
+}
 $window.CMConnect.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
   Start-Process vmconnect -ArgumentList "localhost $selItem"
@@ -851,22 +895,22 @@ $window.lvs.add_MouseLeftButtonUp{
   Get-VMList
 }
 $window.BAdd.add_Click{
-  $Script:timer.Stop()
+  #$Script:timer.Stop()
   Get-AddServer
-  $Script:timer.Start()
+  #$Script:timer.Start()
 }
-
 
 $Window.Add_ContentRendered{
-  Set-Console -hide
   Set-Overlay -show -message 'connecting to Server ...'
-  Get-Preferences
-  $lhname = Get-WmiObject -Class Win32_Computersystem | select Name
-  $window.lvs.AddChild($lhname)
-  Start-Timer
-  Set-Overlay -hide
+  Get-Profile
 }
 
+Set-Console -hide
+Set-Preferences
+
 $result = Show-WPFWindow -Window $window
+
+Set-Profile
+
 $Script:timer.Stop()
 $Script:timer = $null
