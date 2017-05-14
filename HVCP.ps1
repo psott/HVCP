@@ -90,17 +90,8 @@ function Get-Profile
   else{
     Start-Timer
     Set-Overlay -hide
-    #Get-AddServer
-    
-    ### work in progress
-    $window.lvs.Items.Clear()
-    $srv = [PSCustomObject]@{
-      Server = 'localhost'
-      User = ''
-      Password = ''
-    }
-    $window.lvs.AddChild($srv)
-    ###
+    Get-AddServer
+    Set-AddServer
   }
 
 }
@@ -188,7 +179,7 @@ function Get-VMScreenshot
     $yRes #480
   )
   #Credits Taylor Brown
-  $HyperVParent = ($window.lvs.SelectedItem).Name
+  $HyperVParent = ($window.lvs.SelectedItem).Server
   if($HyperVParent -ne $null){
     $HyperVGuest = ($window.lv.SelectedItem).Name
     if($HyperVGuest -ne $null){
@@ -300,10 +291,19 @@ function Get-AddServer
 
   function Get-ServerConnection
   {
+    $Script:NewServer = $null
     $srv = $winaddserver.TBnewServer.Text
     if($srv -ne ''){
       if(Test-Connection -ComputerName $srv -Count 1 -ErrorAction SilentlyContinue){
         if($true){ #creds prüfen
+           $Script:NewServer = [PSCustomObject]@{
+              Server = $winaddserver.TBnewServer.Text
+              UserName = $winaddserver.TBuser.Text
+              Password = ($winaddserver.TBpass.Password) | ConvertTo-SecureString -AsPlainText -Force
+              WinCred = $winaddserver.CBWinCred.IsChecked
+              SaveCred = $winaddserver.CBsaveCred.IsChecked
+            }
+          $winaddserver.TBpass.Password = $null
           $winaddserver.DialogResult = $true
         }
         else{
@@ -349,13 +349,6 @@ function Get-AddServer
   }
 
   $result = Show-WPFWindow -Window $winaddserver
-  [PSCustomObject]@{
-    Server = $winaddserver.TBnewServer.Text
-    User = $winaddserver.TBuser.Text
-    Password = $winaddserver.TBpass.Password
-    WinCred = $winaddserver.CBWinCred.IsChecked
-    SaveCred = $winaddserver.CBsaveCred.IsChecked
-  }
   $Script:timer.Start()
 }
 function Get-NewVM
@@ -614,8 +607,8 @@ $xaml = @'
           <ListView Name="lvs" Margin="5,5,5,30">
                 <ListView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Name ="CMSAddServer" Header="Connect"/>
                         <MenuItem Name ="CMSDisconnect" Header="Disconnect"/>
+                        <MenuItem Name ="CMSAddServer" Header="Add new Server"/>
                     </ContextMenu>
                 </ListView.ContextMenu>
                 <ListView.View>
@@ -704,11 +697,19 @@ $window.CMSDisconnect.add_Click{
   $selHost = $window.lvs.SelectedItem
   $window.lvs.Items.Remove($selHost)
 }
+
+function Set-AddServer
+{
+  if($Script:NewServer -ne $null){
+    $window.lvs.AddChild($Script:NewServer)
+  }
+  $Script:NewServer = $null
+}
+
+
 $window.CMSAddServer.add_Click{
-  #$Script:timer.Stop()
-  $a = Get-AddServer
-  Write-Host $a
-  #$Script:timer.Start()
+  Get-AddServer
+  Set-AddServer
 }
 $window.CMConnect.add_Click{
   $selItem = ($window.lv.SelectedItem).Name
@@ -895,9 +896,8 @@ $window.lvs.add_MouseLeftButtonUp{
   Get-VMList
 }
 $window.BAdd.add_Click{
-  #$Script:timer.Stop()
   Get-AddServer
-  #$Script:timer.Start()
+  Set-AddServer
 }
 
 $Window.Add_ContentRendered{
