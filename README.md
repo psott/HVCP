@@ -9,6 +9,7 @@ Hyper-V console rewritten in Powershell to add all the features we've allways wa
 What does HVCP better then the original Hyper-V Console?
 - delete VMs with all dedicated files with one click
 - enable nested virtualisation via GUI
+- give snapshots names
 - more to come ...
 
 ToDo's:
