@@ -172,81 +172,142 @@ function Show-WPFWindow
 }
 function Get-VMScreenshot
 {
-  param(
-    $HyperVParent, #localhost
-    $HyperVGuest, #Win10-Insider
-    $xRes, #640
-    $yRes #480
-  )
   #Credits Taylor Brown
+  $xRes = 640
+  $yRes = 480
+  $window.image.Source = $null
+  
   $HyperVParent = ($window.lvs.SelectedItem).Server
   if($HyperVParent -ne $null){
-    $HyperVGuest = ($window.lv.SelectedItem).Name
-    if($HyperVGuest -ne $null){
-      [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
-      $ImagePath = "C:\Temp\hvcp" 
-      $VMManagementService = Get-WmiObject -class "Msvm_VirtualSystemManagementService" -namespace "root\virtualization\v2" -ComputerName $HyperVParent 
-      $Vm = Get-WmiObject -Namespace "root\virtualization\v2" -ComputerName $HyperVParent -Query "Select * From Msvm_ComputerSystem Where ElementName='$HyperVGuest'" 
-      $VMSettingData = Get-WmiObject -Namespace "root\virtualization\v2" -Query "Associators of {$Vm} Where ResultClass=Msvm_VirtualSystemSettingData AssocClass=Msvm_SettingsDefineState" -ComputerName $HyperVParent 
-      $RawImageData = $VMManagementService.GetVirtualSystemThumbnailImage($VMSettingData, "$xRes", "$yRes")
-      $VMThumbnail = New-Object System.Drawing.Bitmap($xRes, $yRes, [System.Drawing.Imaging.PixelFormat]::Format16bppRgb565)
-      $rectangle = New-Object System.Drawing.Rectangle(0,0,$xRes,$yRes) 
-      [System.Drawing.Imaging.BitmapData] $VMThumbnailBitmapData = $VMThumbnail.LockBits($rectangle, [System.Drawing.Imaging.ImageLockMode]::WriteOnly, [System.Drawing.Imaging.PixelFormat]::Format16bppRgb565) 
-      [System.Runtime.InteropServices.marshal]::Copy($RawImageData.ImageData, 0, $VMThumbnailBitmapData.Scan0, $xRes*$yRes*2) 
-      $VMThumbnail.UnlockBits($VMThumbnailBitmapData)
-      $rnd = Get-Random -Minimum 100 -Maximum 999
-      $VMThumbnail.Save("$ImagePath\$HyperVGuest-$rnd-vmtemp.png")
-
-      $window.image.Source = "$ImagePath\$HyperVGuest-$rnd-vmtemp.png"
+    $selVM = $window.lv.SelectedItem
+    if($selVM -ne $null){
+      if($selVM.State -eq 'Running' -or $selVM.State -eq 'Saved'){
+        $HyperVGuest = $selVM.Name
+        [System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+        $ImagePath = "C:\Temp\hvcp" 
+        $VMManagementService = Get-WmiObject -class "Msvm_VirtualSystemManagementService" -namespace "root\virtualization\v2" -ComputerName $HyperVParent 
+        $Vm = Get-WmiObject -Namespace "root\virtualization\v2" -ComputerName $HyperVParent -Query "Select * From Msvm_ComputerSystem Where ElementName='$HyperVGuest'" 
+        $VMSettingData = Get-WmiObject -Namespace "root\virtualization\v2" -Query "Associators of {$Vm} Where ResultClass=Msvm_VirtualSystemSettingData AssocClass=Msvm_SettingsDefineState" -ComputerName $HyperVParent 
+        $RawImageData = $VMManagementService.GetVirtualSystemThumbnailImage($VMSettingData, "$xRes", "$yRes")
+        $VMThumbnail = New-Object System.Drawing.Bitmap($xRes, $yRes, [System.Drawing.Imaging.PixelFormat]::Format16bppRgb565)
+        $rectangle = New-Object System.Drawing.Rectangle(0,0,$xRes,$yRes) 
+        [System.Drawing.Imaging.BitmapData] $VMThumbnailBitmapData = $VMThumbnail.LockBits($rectangle, [System.Drawing.Imaging.ImageLockMode]::WriteOnly, [System.Drawing.Imaging.PixelFormat]::Format16bppRgb565) 
+        [System.Runtime.InteropServices.marshal]::Copy($RawImageData.ImageData, 0, $VMThumbnailBitmapData.Scan0, $xRes*$yRes*2) 
+        $VMThumbnail.UnlockBits($VMThumbnailBitmapData)
+      
+        $rnd = Get-Random -Minimum 100 -Maximum 999
+        $VMThumbnail.Save("$ImagePath\$HyperVGuest-$rnd-vmtemp.png")
+        $window.image.Source = "$ImagePath\$HyperVGuest-$rnd-vmtemp.png"
+      }
     }
   }
 }
+function Get-PerfStats
+{
+    $global:SyncHash2 = [hashtable]::Synchronized(@{
+          Window=$window
+          PBCpu = $window.PBCpu
+          PBRam = $window.PBRam
+          PBNic = $window.PBNic
+      })
+      $Runspace2 = [runspacefactory]::CreateRunspace()
+      $Runspace2.ThreadOptions = "ReuseThread"
+      $Runspace2.Open()
+      $Runspace2.SessionStateProxy.SetVariable("SyncHash2", $SyncHash2)
+
+  $Worker2 = [PowerShell]::Create().AddScript{
+    $CPULoad = (Get-CimInstance -ClassName Win32_Processor).LoadPercentage
+    $os = Get-Ciminstance Win32_OperatingSystem
+    $free = $os.FreePhysicalMemory /1MB
+    $total = $os.TotalVisibleMemorySize /1MB
+    $mem = $total - $free
+    ###
+    $SyncHash2.Window.Dispatcher.Invoke([action]{ 
+        $SyncHash2.PBCpu.Value = $CPULoad
+        $SyncHash2.PBRam.Value = $mem
+        $SyncHash2.PBRam.Maximum = $total
+    }, "Normal")
+
+  }
+  $Worker2.Runspace = $Runspace2
+  $Worker2.BeginInvoke()
+}
+
+
 function Get-VMList
 {
+  #Get-PerfStats
   $selIndex = $window.lv.SelectedIndex
-  $window.lv.Items.Clear()
   $selHost = $window.lvs.SelectedItem
   if($selHost.Server -ne $null){
     if(($selHost.Server -eq 'localhost') -or ($selHost.Server -eq (Get-WmiObject win32_computersystem).Name)){
-      $GetVM = Get-VM -ComputerName $selHost.Server | ForEach-Object {
-        $ma = ($_.MemoryAssigned)/1MB
-        $md = ($_.MemoryDemand)/1MB
-        $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
-        [PSCustomObject]@{
-          Name = $_.Name
-          State = $_.State
-          Uptime = $ut
-          ProcessorCount = $_.ProcessorCount
-          CPUUsage = $_.CPUUsage
-          MemoryAssigned = $ma
-          MemoryDemand = $md
-          Version = $_.Version
-          VirtualMachineSubType = $_.VirtualMachineSubType
+      ######################
+      $global:SyncHash = [hashtable]::Synchronized(@{
+          Window=$window
+          PBCpu = $window.PBCpu
+          PBRam = $window.PBRam
+          PBNic = $window.PBNic
+          lv = $window.lv
+          lvs = $window.lvs
+          selHost = $selHost
+      })
+      $Runspace = [runspacefactory]::CreateRunspace()
+      $Runspace.ThreadOptions = "ReuseThread"
+      $Runspace.Open()
+      $Runspace.SessionStateProxy.SetVariable("SyncHash", $SyncHash)
+      $Runspace.SessionStateProxy.SetVariable("selHost", $selHost)
+      $Runspace.SessionStateProxy.SetVariable("selIndex", $selIndex)
+      $selHost | Out-File -FilePath C:\Temp\checkvar1.txt
+      
+      $Worker = [PowerShell]::Create().AddScript{
+        $selHost | Out-File -FilePath C:\Temp\checkvar2.txt
+        $GetVM = Get-VM -ComputerName $selHost.Server | ForEach-Object { #-ComputerName $selHost.Server
+          $ma = ($_.MemoryAssigned)/1MB
+          $md = ($_.MemoryDemand)/1MB
+          $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
+          [PSCustomObject]@{
+            Name = $_.Name
+            State = $_.State
+            Uptime = $ut
+            ProcessorCount = $_.ProcessorCount
+            CPUUsage = $_.CPUUsage
+            MemoryAssigned = $ma
+            MemoryDemand = $md
+            Version = $_.Version
+            VirtualMachineSubType = $_.VirtualMachineSubType
+          }
         }
+        $GetVM | Out-File -FilePath C:\Temp\out1.txt
+        ### perf
+        $CPULoad = (Get-CimInstance -ClassName Win32_Processor).LoadPercentage
+        $os = Get-Ciminstance Win32_OperatingSystem
+        $free = $os.FreePhysicalMemory /1MB
+        $total = $os.TotalVisibleMemorySize /1MB
+        $mem = $total - $free
+        ###
+        $SyncHash.Window.Dispatcher.Invoke([action]{ 
+            #$SyncHash.lv.Items.Clear()
+            $SyncHash.lv.ItemsSource = $null
+            $SyncHash.lv.ItemsSource = $GetVM
+            $SyncHash.lv.SelectedIndex = $selIndex
+            $SyncHash.PBCpu.Value = $CPULoad
+            $SyncHash.PBRam.Value = $mem
+            $SyncHash.PBRam.Maximum = $total
+        }, "Normal")
+
       }
-      $GetVM | ForEach-Object {$window.lv.AddChild($_)}
+      $Worker.Runspace = $Runspace
+      $Worker.BeginInvoke()
+      Get-VMScreenshot
+      ########################
     }
     else{
-      $cred = New-Object System.Management.Automation.PSCredential ($selHost.UserName, $selHost.Password)
-      $ncs = New-CimSession -ComputerName $selHost.Server -Credential $cred
-      $GetVM = Get-VM -CimSession $ncs | ForEach-Object {
-        $ma = ($_.MemoryAssigned)/1MB
-        $md = ($_.MemoryDemand)/1MB
-        $ut = "$($_.Uptime.Days)d $($_.Uptime.Hours)h $($_.Uptime.Minutes)m $($_.Uptime.Seconds)s"
-        [PSCustomObject]@{
-          Name = $_.Name
-          State = $_.State
-          Uptime = $ut
-          ProcessorCount = $_.ProcessorCount
-          CPUUsage = $_.CPUUsage
-          MemoryAssigned = $ma
-          MemoryDemand = $md
-          Version = $_.Version
-          VirtualMachineSubType = $_.VirtualMachineSubType
-        }
-      }
-      $GetVM | ForEach-Object {$window.lv.AddChild($_)}
+      #remote server
     }
+  }
+  else{
+    #'kein server ausgewählt'
+    $window.lv.ItemsSource = $null
   }
   $window.lv.SelectedIndex = $selIndex
 }
@@ -588,6 +649,7 @@ $xaml = @'
         <Grid.RowDefinitions>
             <RowDefinition Height="20" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="20" />
         </Grid.RowDefinitions>
         <DockPanel Grid.ColumnSpan="3">
             <Menu DockPanel.Dock="Top">
@@ -599,12 +661,12 @@ $xaml = @'
                     <MenuItem Name="MQuick" Header="Quick Create" />
                 </MenuItem>
                 <MenuItem Header="Help">
-                    <MenuItem Name="MAbout" Header="About Hyper-V Console Plus" /> 
+                    <MenuItem Name="MAbout" Header="About Hyper-V Console Plus" />
                 </MenuItem>
             </Menu>
         </DockPanel>
         <Grid Grid.Column="0" Grid.Row="1">
-          <ListView Name="lvs" Margin="5,5,5,30">
+            <ListView Name="lvs" Margin="5,5,5,30">
                 <ListView.ContextMenu>
                     <ContextMenu>
                         <MenuItem Name ="CMSDisconnect" Header="Disconnect"/>
@@ -662,18 +724,24 @@ $xaml = @'
             <Image x:Name="image" Height="180" Width="240" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5"/>
         </Grid>
 
-        <Rectangle Name="overlay" Grid.ColumnSpan="3" Grid.RowSpan="3" Fill="#D8497199" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Visible"/>
+        <ProgressBar Name="PBCpu" Grid.Column="3" Grid.Row="3" Height="18" Width="240" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0" Value="0" Foreground="#FF06B025"  />
+        <ProgressBar Name="PBRam" Grid.Column="3" Grid.Row="3" Height="18" Width="240" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="250,0,0,0" Value="0" Foreground="#FF06B025"  />
+        <ProgressBar Name="PBNic" Grid.Column="3" Grid.Row="3" Height="18" Width="240" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="495,0,0,0" Value="0" Foreground="#FF06B025"  />
 
-        <Path Name="overLogo" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Fill="#FFFCFCFC" Width="138" Height="138" Margin="0,-100,0,0" Visibility="Visible" RenderTransformOrigin="0.5,0.5" Data="F1 M 20,20L 56,20L 56,56L 20,56L 20,20 Z M 24,24L 24,52L 52,52L 52,24L 24,24 Z M 31,36L 36,36L 36,31L 40,31L 40,36L 45,36L 45,40L 40,40L 40,45L 36,45L 36,40L 31,40L 31,36 Z " />
-        <TextBlock Name="overVersion" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,70,0,0" TextWrapping="Wrap" Text="Hyper-V Console Plus " VerticalAlignment="Center" FontSize="20" Foreground="White" FontWeight="Bold" FontStyle="Italic" Visibility="Visible"/>
-        <TextBlock Name="overtext" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,150,0,0" TextWrapping="Wrap" Text="loading database . . . " VerticalAlignment="Center" FontSize="20" Foreground="White" Visibility="Visible"/>
-        
+        <Rectangle Name="overlay" Grid.ColumnSpan="3" Grid.RowSpan="3" Fill="#D8497199" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Visibility="Hidden"/>
+        <Path Name="overLogo" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" Fill="#FFFCFCFC" Width="138" Height="138" Margin="0,-100,0,0" Visibility="Hidden" RenderTransformOrigin="0.5,0.5" Data="F1 M 20,20L 56,20L 56,56L 20,56L 20,20 Z M 24,24L 24,52L 52,52L 52,24L 24,24 Z M 31,36L 36,36L 36,31L 40,31L 40,36L 45,36L 45,40L 40,40L 40,45L 36,45L 36,40L 31,40L 31,36 Z " />
+        <TextBlock Name="overVersion" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,70,0,0" TextWrapping="Wrap" Text="Hyper-V Console Plus " VerticalAlignment="Center" FontSize="20" Foreground="White" FontWeight="Bold" FontStyle="Italic" Visibility="Hidden"/>
+        <TextBlock Name="overtext" Grid.ColumnSpan="3" Grid.RowSpan="3" HorizontalAlignment="Center" Margin="0,150,0,0" TextWrapping="Wrap" Text="loading database . . . " VerticalAlignment="Center" FontSize="20" Foreground="White" Visibility="Hidden"/>
+
     </Grid>
 </Window>
 '@
 
 #endregion
-$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDisconnect','CMSAddServer','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMSnapshotMngr','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
+$window = Convert-XAMLtoWindow -XAML $xaml -NamedElement 'PBCpu','PBRam','PBNic','overlay','overLogo','overVersion','overtext','CMPause','MOptions','MExit','MAbout','CMSDisconnect','CMSAddServer','CMConnect','CMRestart','CMSave','CMShutdown','CMPowerOff','CMSnapshot','CMSnapshotMngr','CMMove','CMExport','CMDelete','CMDeleteDisk','CMSettings','CMStart','image','lv','lvs','BAdd','MQuick' -PassThru
+
+
+
 
 $window.MOptions.add_Click{
   $Script:timer.Stop()
@@ -701,11 +769,15 @@ $window.CMSDisconnect.add_Click{
 function Set-AddServer
 {
   if($Script:NewServer -ne $null){
-    $window.lvs.AddChild($Script:NewServer)
+    if ($window.lvs.Items | where{$_.Server -eq $Script:NewServer.Server}){
+      Get-Popup -mes "$($Script:NewServer.Server) is allready in the list" -info 'Info'
+    }
+    else{
+      $window.lvs.AddChild($Script:NewServer)
+    }
   }
   $Script:NewServer = $null
 }
-
 
 $window.CMSAddServer.add_Click{
   Get-AddServer
@@ -886,11 +958,7 @@ $window.lv.add_MouseRightButtonUp{
 }
 
 $window.lv.add_MouseLeftButtonUp{
-  $window.image.Source = $null
-  $sel = $window.lv.SelectedItem
-  if($sel.State -eq 'Running' -or $sel.State -eq 'Saved'){
-    Get-VMScreenshot -HyperVParent localhost -HyperVGuest $sel.Name -xRes 640 -yRes 480
-  }
+  Get-VMScreenshot
 }
 $window.lvs.add_MouseLeftButtonUp{
   Get-VMList
@@ -914,3 +982,4 @@ Set-Profile
 
 $Script:timer.Stop()
 $Script:timer = $null
+Stop-Process -Id $PID
